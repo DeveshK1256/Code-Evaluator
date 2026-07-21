@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSupabaseServerClient } from "@/lib/auth/supabase-server";
+import { getSupabaseApiClient } from "@/lib/auth/api-client";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { z } from "zod";
 
@@ -12,12 +12,26 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password } = loginSchema.parse(body);
-    const supabase = await getSupabaseServerClient();
+
+    let supabase;
+    try {
+      supabase = getSupabaseApiClient();
+    } catch {
+      return apiError({
+        code: "CONFIGURATION_ERROR",
+        message: "Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.",
+        statusCode: 503,
+      } as never);
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       return apiError({ code: "AUTH_ERROR", message: error.message, statusCode: 401 } as never);
+    }
+
+    if (!data.user || !data.session) {
+      return apiError({ code: "AUTH_ERROR", message: "Login failed. Check your credentials.", statusCode: 401 } as never);
     }
 
     return apiSuccess({
