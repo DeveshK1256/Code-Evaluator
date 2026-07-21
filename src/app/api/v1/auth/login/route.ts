@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       user: {
         id: data.user.id,
-        email: data.user.email,
+        email: data.user.email!,
         displayName: data.user.user_metadata?.display_name ?? null,
         avatarUrl: data.user.user_metadata?.avatar_url ?? null,
       },
