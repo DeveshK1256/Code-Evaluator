@@ -12,8 +12,24 @@ const schema = z.object({
   name: z.string().optional(),
 });
 
+function isConfigured(): boolean {
+  return !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_project_url"
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
+    if (!isConfigured()) {
+      return apiError({
+        code: "CONFIGURATION_ERROR",
+        message: "Supabase is not configured. Repository import requires database storage. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.",
+        statusCode: 503,
+      } as never);
+    }
+
     const body = await request.json();
     const { githubUrl, name } = schema.parse(body);
 

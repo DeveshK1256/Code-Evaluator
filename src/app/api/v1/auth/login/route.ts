@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
-import { getSupabaseApiClient } from "@/lib/auth/api-client";
-import { apiSuccess, apiError } from "@/lib/api/response";
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { apiError } from "@/lib/api/response";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -13,44 +13,82 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password } = loginSchema.parse(body);
 
-    let supabase;
-    try {
-      supabase = getSupabaseApiClient();
-    } catch {
-      return apiError({
-        code: "CONFIGURATION_ERROR",
-        message: "Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.",
-        statusCode: 503,
-      } as never);
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!url || !key) {
+      return NextResponse.json({
+        success: false,
+        error: { code: "CONFIGURATION_ERROR", message: "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY." },
+      }, { status: 503 });
     }
+
+    // Use SSR client to properly set auth cookies
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        },
+      },
+    });
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      return apiError({ code: "AUTH_ERROR", message: error.message, statusCode: 401 } as never);
+      return NextResponse.json({
+        success: false,
+        error: { code: "AUTH_ERROR", message: error.message },
+      }, { status: 401 });
     }
 
-    if (!data.user || !data.session) {
-      return apiError({ code: "AUTH_ERROR", message: "Login failed. Check your credentials.", statusCode: 401 } as never);
+    if (!data.session) {
+      return NextResponse.json({
+        success: false,
+        error: { code: "AUTH_ERROR", message: "No session returned. Check Supabase configuration." },
+      }, { status: 401 });
     }
 
-    return apiSuccess({
-      user: {
-        id: data.user.id,
-        email: data.user.email!,
-        displayName: data.user.user_metadata?.display_name ?? null,
-        avatarUrl: data.user.user_metadata?.avatar_url ?? null,
-      },
-      session: {
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
-        expiresAt: new Date(data.session.expires_at! * 1000).toISOString(),
+    // Create response with auth cookies
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        user: {
+          id: data.user.id,
+          email: data.user.email!,
+          displayName: data.user.user_metadata?.display_name ?? null,
+        },
       },
     });
+
+    // Set auth cookies on the response
+    response.cookies.set("sb-access-token", data.session.access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: data.session.expires_in,
+      path: "/",
+    });
+    response.cookies.set("sb-refresh-token", data.session.refresh_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: data.session.expires_in,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError({ code: "VALIDATION_ERROR", message: error.errors[0]?.message ?? "Validation failed", statusCode: 422 } as never);
+      return NextResponse.json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: error.errors[0]?.message ?? "Validation failed" },
+      }, { status: 422 });
     }
-    return apiError(error);
+    const message = error instanceof Error ? error.message : "An unexpected error occurred";
+    return NextResponse.json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message },
+    }, { status: 500 });
   }
 }
