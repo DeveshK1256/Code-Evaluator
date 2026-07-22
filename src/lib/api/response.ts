@@ -50,7 +50,7 @@ export function apiError(error: unknown, requestId?: string): NextResponse {
     success: false,
     error: {
       code: "INTERNAL_ERROR",
-      message: error ?? "An unexpected error occurred",
+      message: error != null ? String(error) : "An unexpected error occurred",
     },
     meta: createMeta(requestId),
   };
