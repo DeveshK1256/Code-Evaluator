@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
-import { ValidationError } from "@/lib/utils/errors";
+import { AppError, ValidationError } from "@/lib/utils/errors";
 import { repositoryService } from "@/services/repository.service";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import { gitHubService } from "@/services/github.service";
 import { inngest } from "@/inngest/client";
 import { logger } from "@/lib/logger";
@@ -23,18 +24,17 @@ function isConfigured(): boolean {
 export async function POST(request: NextRequest) {
   try {
     if (!isConfigured()) {
-      return apiError({
-        code: "CONFIGURATION_ERROR",
-        message: "Supabase is not configured. Repository import requires database storage. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.",
-        statusCode: 503,
-      } as never);
+      return apiError(
+        new AppError("CONFIGURATION_ERROR", "Supabase is not configured. Repository import requires database storage. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.", 503)
+      );
     }
 
     const body = await request.json();
     const { githubUrl, name } = schema.parse(body);
 
-    // Simulate auth (will use real session in production)
-    const userId = "user-placeholder";
+    // Authenticate from request cookies
+    const user = await getAuthenticatedUser(request);
+    const userId = user.id;
 
     // 1. Validate and parse URL
     const { owner, repo, branch } = gitHubService.parseUrl(githubUrl);

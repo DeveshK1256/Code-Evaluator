@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { repositoryService } from "@/services/repository.service";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import type { RepositoryStatus } from "@/types/repository";
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = "user-placeholder";
+    const user = await getAuthenticatedUser(request);
+    const userId = user.id;
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page") ?? "1");
     const pageSize = parseInt(url.searchParams.get("pageSize") ?? "20");

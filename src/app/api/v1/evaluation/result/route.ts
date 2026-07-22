@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { AppError } from "@/lib/utils/errors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const sessionId = url.searchParams.get("sessionId");
 
     if (!repositoryId && !sessionId) {
-      return apiError({ code: "VALIDATION_ERROR", message: "Provide repositoryId or sessionId", statusCode: 422 } as never);
+      return apiError(new AppError("VALIDATION_ERROR", "Provide repositoryId or sessionId", 422));
     }
 
     // In production, fetch from database

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { apiError } from "@/lib/api/response";
+import { createClient } from "@supabase/supabase-js";
+import { apiSuccess } from "@/lib/api/response";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -23,14 +23,9 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
 
-    // Use SSR client to properly set auth cookies
-    const supabase = createServerClient(url, key, {
-      cookies: {
-        getAll() { return request.cookies.getAll(); },
-        setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        },
-      },
+    // Use direct supabase-js client (not SSR) since API routes manage cookies manually via the response
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -50,14 +45,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create response with auth cookies
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          id: data.user.id,
-          email: data.user.email!,
-          displayName: data.user.user_metadata?.display_name ?? null,
-        },
+    const response = apiSuccess({
+      user: {
+        id: data.user.id,
+        email: data.user.email!,
+        displayName: data.user.user_metadata?.display_name ?? null,
       },
     });
 

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { AppError } from "@/lib/utils/errors";
 import { getSupabaseAdminClient } from "@/lib/auth/supabase-admin";
 
 /**
@@ -21,7 +22,7 @@ export async function GET(
       .single();
 
     if (error || !data) {
-      return apiError({ code: "NOT_FOUND", message: "Intelligence data not found. Run analysis first.", statusCode: 404 } as never);
+      return apiError(new AppError("NOT_FOUND", "Intelligence data not found. Run analysis first.", 404));
     }
 
     return apiSuccess(data);

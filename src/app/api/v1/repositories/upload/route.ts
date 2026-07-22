@@ -5,6 +5,7 @@ import { tmpdir } from "os";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { ValidationError } from "@/lib/utils/errors";
 import { repositoryService } from "@/services/repository.service";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import { uploadService } from "@/services/upload.service";
 import { zipService } from "@/services/zip.service";
 import { inngest } from "@/inngest/client";
@@ -12,7 +13,8 @@ import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = "user-placeholder";
+    const user = await getAuthenticatedUser(request);
+    const userId = user.id;
     const formData = await request.formData();
     const file = formData.get("file");
 

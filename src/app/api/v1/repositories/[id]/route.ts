@@ -1,22 +1,24 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { repositoryService } from "@/services/repository.service";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
+import { NotFoundError } from "@/lib/utils/errors";
 import { manifestService } from "@/services/manifest.service";
 import { rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const userId = "user-placeholder";
-    const repo = await repositoryService.getById(id, userId);
+    const user = await getAuthenticatedUser(request);
+    const repo = await repositoryService.getById(id, user.id);
 
     if (!repo) {
-      return apiError({ code: "NOT_FOUND", message: "Repository not found", statusCode: 404 } as never);
+      return apiError(new NotFoundError("Repository"));
     }
 
     return apiSuccess(repo);
@@ -26,16 +28,17 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const userId = "user-placeholder";
+    const user = await getAuthenticatedUser(request);
+    const userId = user.id;
 
     const repo = await repositoryService.getById(id, userId);
     if (!repo) {
-      return apiError({ code: "NOT_FOUND", message: "Repository not found", statusCode: 404 } as never);
+      return apiError(new NotFoundError("Repository"));
     }
 
     // Clean up workspace

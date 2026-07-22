@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import { evaluationOrchestrator } from "@/services/evaluation/evaluation-orchestrator";
 import { inngest } from "@/inngest/client";
 import { logger } from "@/lib/logger";
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { repositoryId, profileId, selectedModules, customWeights, readme, problemStatement } = schema.parse(body);
-    const userId = "user-placeholder";
+    const user = await getAuthenticatedUser(request);
+    const userId = user.id;
 
     // Queue background evaluation
     await inngest.send({

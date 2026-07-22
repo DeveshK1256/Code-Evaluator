@@ -39,7 +39,7 @@ export function apiError(error: unknown, requestId?: string): NextResponse {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
+        message: error.message,
       },
       meta: createMeta(requestId),
     };
@@ -50,7 +50,7 @@ export function apiError(error: unknown, requestId?: string): NextResponse {
     success: false,
     error: {
       code: "INTERNAL_ERROR",
-      message: "An unexpected error occurred",
+      message: error ?? "An unexpected error occurred",
     },
     meta: createMeta(requestId),
   };

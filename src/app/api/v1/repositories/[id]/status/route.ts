@@ -1,18 +1,20 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { repositoryService } from "@/services/repository.service";
+import { getAuthenticatedUser } from "@/lib/auth/api-auth";
+import { NotFoundError } from "@/lib/utils/errors";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const userId = "user-placeholder";
-    const status = await repositoryService.getStatus(id, userId);
+    const user = await getAuthenticatedUser(request);
+    const status = await repositoryService.getStatus(id, user.id);
 
     if (!status) {
-      return apiError({ code: "NOT_FOUND", message: "Repository not found", statusCode: 404 } as never);
+      return apiError(new NotFoundError("Repository"));
     }
 
     return apiSuccess(status);

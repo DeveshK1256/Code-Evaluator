@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { AppError } from "@/lib/utils/errors";
 import { z } from "zod";
 
 const schema = z.object({
@@ -18,14 +19,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return apiError({ code: "AUTH_ERROR", message: error.message, statusCode: 400 } as never);
+      return apiError(new AppError("AUTH_ERROR", error.message, 400));
     }
 
     // Always return success to prevent email enumeration
     return apiSuccess({ message: "If an account exists, a reset link has been sent." });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError({ code: "VALIDATION_ERROR", message: error.errors[0]?.message ?? "Validation failed", statusCode: 422 } as never);
+      return apiError(new AppError("VALIDATION_ERROR", error.errors[0]?.message ?? "Validation failed", 422));
     }
     return apiError(error);
   }

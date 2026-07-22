@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { apiSuccess } from "@/lib/api/response";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -23,11 +24,9 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
 
-    const supabase = createServerClient(url, key, {
-      cookies: {
-        getAll() { return request.cookies.getAll(); },
-        setAll(_cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) { /* cookies set on response below */ },
-      },
+    // Use direct supabase-js client (not SSR) since API routes manage cookies manually
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const { data, error } = await supabase.auth.signUp({
@@ -45,8 +44,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Supabase returns a user even for existing emails (if confirmation email resend succeeds)
-    // Detect this: if identity data exists, it means this is a pre-existing user
+    // Supabase returns identities=[] when the email is already registered
     if (data.user?.identities?.length === 0) {
       return NextResponse.json({
         success: false,
@@ -61,16 +59,13 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          id: data.user.id,
-          email: data.user.email!,
-          displayName: data.user.user_metadata?.display_name ?? null,
-        },
+    const response = apiSuccess({
+      user: {
+        id: data.user.id,
+        email: data.user.email!,
+        displayName: data.user.user_metadata?.display_name ?? null,
       },
-    }, { status: 201 });
+    }, 201);
 
     // Set session cookies if session was created (auto-confirm enabled)
     if (data.session) {
