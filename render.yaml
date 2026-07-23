@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: code-evaluator
+    runtime: docker
+    repo: https://github.com/DeveshK1256/Code-Evaluator
+    branch: master
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://code-evaluator.onrender.com
+      - key: LOG_LEVEL
+        value: info
