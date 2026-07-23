@@ -7,4 +7,6 @@ import { ingestGitHubRepository, ingestZipRepository } from "@/inngest/functions
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [ingestGitHubRepository, ingestZipRepository],
+  serveHost: process.env.NEXT_PUBLIC_APP_URL,
+  servePath: "/api/inngest",
 });
