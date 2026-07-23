@@ -8,7 +8,9 @@ import { repositoryService } from "@/services/repository.service";
 import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import { uploadService } from "@/services/upload.service";
 import { zipService } from "@/services/zip.service";
-import { inngest } from "@/inngest/client";
+import { fileDiscoveryService } from "@/services/file-discovery.service";
+import { techDetectionService } from "@/services/tech-detection.service";
+import { manifestService } from "@/services/manifest.service";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -90,32 +92,79 @@ export async function POST(request: NextRequest) {
       fileCount: extractResult.fileCount,
     });
 
-    // Mark upload complete
-    await uploadService.updateProgress(upload.id, 100, "completed");
+    // ─── Synchronous processing (replaces Inngest to avoid event size limit) ───
 
-    // Queue background ingestion for tech detection + manifest
-    await inngest.send({
-      name: "repository/zip.ingest",
-      data: {
-        repositoryId: repository.id,
-        buffer: Array.from(buffer),
-        userId,
-      },
+    // Scan files
+    await uploadService.updateProgress(upload.id, 60, "scanning");
+    await repositoryService.updateStatus(repository.id, "scanning", {
+      progress: 60,
+      statusMessage: "Scanning extracted files...",
     });
 
-    logger.info("ZIP upload queued for processing", {
+    const scanResult = await fileDiscoveryService.scan(workspacePath, repository.id);
+    const fingerprint = fileDiscoveryService.generateFingerprint(scanResult.directoryTree);
+
+    await repositoryService.updateMetadata(repository.id, {
+      sizeBytes: scanResult.summary.totalSizeBytes,
+      fileCount: scanResult.summary.totalFiles,
+      hasReadme: scanResult.files.some((f) => f.path.toLowerCase().startsWith("readme")),
+      hasLicense: scanResult.files.some((f) => f.path.toLowerCase().startsWith("license")),
+      hasCiCd: scanResult.files.some((f) => f.path.startsWith(".github/workflows/")),
+    });
+
+    // Detect technologies
+    await uploadService.updateProgress(upload.id, 80, "detecting");
+    await repositoryService.updateStatus(repository.id, "detecting", {
+      progress: 80,
+      statusMessage: "Detecting technologies...",
+    });
+
+    const techResult = await techDetectionService.detect(
+      scanResult.files.map((f) => f.path),
+      async (path: string) => fileDiscoveryService.readFileContent(workspacePath, path)
+    );
+
+    // Generate manifest
+    const manifest = await manifestService.generate({
+      repositoryId: repository.id,
+      name: `Upload ${new Date().toLocaleDateString()}`,
+      source: "zip",
+      totalFiles: scanResult.summary.totalFiles,
+      totalSizeBytes: scanResult.summary.totalSizeBytes,
+      hasReadme: scanResult.summary.configFiles > 0,
+      hasLicense: scanResult.files.some((f) => f.path.toLowerCase().startsWith("license")),
+      hasCiCd: scanResult.files.some((f) => f.path.startsWith(".github/workflows/")),
+      files: scanResult.files,
+      technologies: techResult,
+      directoryTree: scanResult.directoryTree,
+    });
+
+    // Mark ready
+    await uploadService.updateProgress(upload.id, 100, "completed");
+    await repositoryService.updateStatus(repository.id, "ready_for_analysis", {
+      progress: 100,
+      statusMessage: "Upload ready for analysis",
+      contentFingerprint: fingerprint,
+      manifestId: manifest.id,
+    });
+
+    logger.info("ZIP upload processed successfully", {
       repositoryId: repository.id,
       fileName: file.name,
       fileSize: file.size,
+      fileCount: scanResult.summary.totalFiles,
+      technologies: techResult.items.length,
     });
 
     return apiSuccess({
       id: repository.id,
       uploadId: upload.id,
       name: repository.name,
-      status: repository.status,
-      fileCount: extractResult.fileCount,
-      sizeBytes: extractResult.totalSizeBytes,
+      status: "ready_for_analysis",
+      fileCount: scanResult.summary.totalFiles,
+      sizeBytes: scanResult.summary.totalSizeBytes,
+      technologies: techResult.items.map((t) => t.name),
+      manifestId: manifest.id,
     }, 201);
   } catch (error) {
     return apiError(error);
