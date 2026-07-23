@@ -23,7 +23,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         />
         {error && (
           <p id={`${props.id}-error`} className="mt-1 text-xs text-destructive" role="alert">
-            {error}
+            {typeof error === "string" ? error : "An unexpected error occurred"}
           </p>
         )}
       </div>
