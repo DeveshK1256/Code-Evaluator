@@ -1,6 +1,6 @@
 FROM node:20-slim AS base
 
-# Install pnpm (match package.json packageManager version)
+# Install pnpm
 RUN npm install -g pnpm@9.15.4
 
 FROM base AS deps
@@ -25,9 +25,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=build /app/public ./public
+# Copy everything from build in one go
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy public directory if it exists
+RUN mkdir -p public
+COPY --from=build /app/public ./public || true
 
 USER nextjs
 
