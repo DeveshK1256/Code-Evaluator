@@ -135,7 +135,10 @@ export class TechDetectionService {
     items: TechnologyItem[];
     categories: Record<string, TechnologyItem[]>;
   }> {
-    // Read key config files for content-based detection
+    // Use a Set for O(1) file lookups
+    const fileSet = new Set(files);
+
+    // Read key config files for content-based detection in parallel
     const configFiles = [
       "package.json", "requirements.txt", "pyproject.toml",
       "composer.json", "Gemfile", "pubspec.yaml", "go.mod",
@@ -143,12 +146,14 @@ export class TechDetectionService {
     ];
 
     const content: Record<string, string> = {};
-    for (const cf of configFiles) {
-      if (files.includes(cf)) {
-        const text = await readFileContent(cf);
-        if (text) content[cf] = text;
-      }
-    }
+    await Promise.all(
+      configFiles.map(async (cf) => {
+        if (fileSet.has(cf)) {
+          const text = await readFileContent(cf);
+          if (text) content[cf] = text;
+        }
+      })
+    );
 
     // Run all detection rules
     const items: TechnologyItem[] = [];
