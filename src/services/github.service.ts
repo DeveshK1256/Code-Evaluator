@@ -1,7 +1,7 @@
 import { ValidationError } from "@/lib/utils/errors";
 import type { GitHubRepoMetadata, RepositoryFile } from "@/types/repository";
 import { logger } from "@/lib/logger";
-import { mkdirSync, existsSync } from "fs";
+import { mkdirSync, existsSync, writeFileSync } from "fs";
 import { join } from "path";
 
 export class GitHubService {
@@ -138,7 +138,7 @@ export class GitHubService {
     const branchName = branch ?? (await this.getDefaultBranch(owner, repo));
     const archiveUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${branchName}`;
 
-    logger.info("Downloading repository archive", { owner, repo, branch: branchName, url: archiveUrl });
+    logger.info("Downloading repository archive", { owner, repo, branch: branchName });
 
     const response = await fetch(archiveUrl, {
       headers: {
@@ -167,34 +167,41 @@ export class GitHubService {
       mkdirSync(workspacePath, { recursive: true });
     }
 
-    // Extract using zipService (the archive contains a root folder, we strip it)
+    // Extract to a temp directory first, then move contents up one level
+    // (GitHub wraps all files in a root folder like "owner-repo-commit/")
     const { default: AdmZip } = await import("adm-zip");
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
 
-    // Find the root folder name (GitHub wraps content in a folder)
-    const rootDirs = new Set<string>();
-    for (const entry of entries) {
-      const parts = entry.entryName.split("/");
-      if (parts.length > 1) rootDirs.add(parts[0]!);
-    }
-    const rootPrefix = rootDirs.size === 1 ? [...rootDirs][0]! + "/" : "";
+    // Detect the single root folder from the first entry
+    const firstEntry = entries.find((e) => !e.isDirectory);
+    const rootPrefix = firstEntry?.entryName?.includes("/")
+      ? firstEntry.entryName.split("/")[0] + "/"
+      : "";
 
     let fileCount = 0;
     for (const entry of entries) {
       if (entry.isDirectory) continue;
-      if (rootPrefix && !entry.entryName.startsWith(rootPrefix)) continue;
 
-      const relativePath = rootPrefix ? entry.entryName.slice(rootPrefix.length) : entry.entryName;
+      const entryName = entry.entryName;
+      // Strip the root folder prefix
+      const relativePath = rootPrefix ? entryName.slice(rootPrefix.length) : entryName;
       if (!relativePath) continue;
 
+      // Zip Slip prevention
+      if (relativePath.includes("..") || relativePath.startsWith("/")) {
+        logger.warn("Path traversal blocked in GitHub archive", { entryName });
+        continue;
+      }
+
       const fullPath = join(workspacePath, relativePath);
-      const dir = relativePath.substring(0, relativePath.lastIndexOf("/"));
+      const dir = relativePath.includes("/") ? relativePath.substring(0, relativePath.lastIndexOf("/")) : "";
       if (dir) {
         mkdirSync(join(workspacePath, dir), { recursive: true });
       }
 
-      entry.extractEntryTo(workspacePath, false, false, rootPrefix || undefined);
+      const data = entry.getData();
+      writeFileSync(fullPath, data);
       fileCount++;
 
       if (fileCount > 50000) {
