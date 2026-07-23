@@ -1,6 +1,8 @@
 import { ValidationError } from "@/lib/utils/errors";
 import type { GitHubRepoMetadata, RepositoryFile } from "@/types/repository";
 import { logger } from "@/lib/logger";
+import { mkdirSync, existsSync } from "fs";
+import { join } from "path";
 
 export class GitHubService {
   private readonly apiBase = "https://api.github.com";
@@ -128,29 +130,79 @@ export class GitHubService {
   }
 
   /**
-   * Shallow clone a repository to a local workspace.
+   * Clone a repository to a local workspace by downloading the source ZIP.
+   * Uses the GitHub API instead of `git clone` since `git` is not available
+   * in serverless environments (e.g. Vercel).
    */
   async cloneToWorkspace(owner: string, repo: string, workspacePath: string, branch?: string): Promise<void> {
-    const { execSync } = await import("child_process");
-    const cloneUrl = `https://github.com/${owner}/${repo}.git`;
+    const branchName = branch ?? (await this.getDefaultBranch(owner, repo));
+    const archiveUrl = `https://api.github.com/repos/${owner}/${repo}/zipball/${branchName}`;
 
-    try {
-      execSync(
-        `git clone --depth 1 --single-branch ${branch ? `--branch ${branch}` : ""} "${cloneUrl}" "${workspacePath}"`,
-        { timeout: 120000, stdio: "pipe" }
-      );
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error("Git clone failed", { owner, repo, error: message });
+    logger.info("Downloading repository archive", { owner, repo, branch: branchName, url: archiveUrl });
 
-      if (message.includes("Repository not found") || message.includes("404")) {
-        throw new ValidationError(`Repository "${owner}/${repo}" not found.`);
-      }
-      if (message.includes("timeout")) {
-        throw new ValidationError("Clone timed out. The repository may be too large.");
-      }
-      throw new ValidationError(`Failed to clone repository: ${message.substring(0, 200)}`);
+    const response = await fetch(archiveUrl, {
+      headers: {
+        ...this.getHeaders(),
+        Accept: "application/vnd.github.v3+json",
+      },
+      signal: AbortSignal.timeout(120000),
+    });
+
+    if (response.status === 404) {
+      throw new ValidationError(`Repository "${owner}/${repo}" not found. It may be private or deleted.`);
     }
+    if (response.status === 403) {
+      throw new ValidationError("GitHub API rate limit exceeded. Please try again later.");
+    }
+    if (!response.ok) {
+      throw new ValidationError(`Failed to download repository: ${response.statusText}`);
+    }
+
+    // Read the ZIP content
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Create workspace directory
+    if (!existsSync(workspacePath)) {
+      mkdirSync(workspacePath, { recursive: true });
+    }
+
+    // Extract using zipService (the archive contains a root folder, we strip it)
+    const { default: AdmZip } = await import("adm-zip");
+    const zip = new AdmZip(buffer);
+    const entries = zip.getEntries();
+
+    // Find the root folder name (GitHub wraps content in a folder)
+    const rootDirs = new Set<string>();
+    for (const entry of entries) {
+      const parts = entry.entryName.split("/");
+      if (parts.length > 1) rootDirs.add(parts[0]!);
+    }
+    const rootPrefix = rootDirs.size === 1 ? [...rootDirs][0]! + "/" : "";
+
+    let fileCount = 0;
+    for (const entry of entries) {
+      if (entry.isDirectory) continue;
+      if (rootPrefix && !entry.entryName.startsWith(rootPrefix)) continue;
+
+      const relativePath = rootPrefix ? entry.entryName.slice(rootPrefix.length) : entry.entryName;
+      if (!relativePath) continue;
+
+      const fullPath = join(workspacePath, relativePath);
+      const dir = relativePath.substring(0, relativePath.lastIndexOf("/"));
+      if (dir) {
+        mkdirSync(join(workspacePath, dir), { recursive: true });
+      }
+
+      entry.extractEntryTo(workspacePath, false, false, rootPrefix || undefined);
+      fileCount++;
+
+      if (fileCount > 50000) {
+        throw new ValidationError("Repository contains too many files. Maximum is 50,000.");
+      }
+    }
+
+    logger.info("Repository archive extracted", { owner, repo, fileCount });
   }
 
   /**
