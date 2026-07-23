@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // ─── Synchronous processing (replaces Inngest to avoid event size limit) ───
 
     // Scan files
-    await uploadService.updateProgress(upload.id, 60, "scanning");
+    await uploadService.updateProgress(upload.id, 60, "processing");
     await repositoryService.updateStatus(repository.id, "scanning", {
       progress: 60,
       statusMessage: "Scanning extracted files...",
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Detect technologies
-    await uploadService.updateProgress(upload.id, 80, "detecting");
+    await uploadService.updateProgress(upload.id, 80, "processing");
     await repositoryService.updateStatus(repository.id, "detecting", {
       progress: 80,
       statusMessage: "Detecting technologies...",
