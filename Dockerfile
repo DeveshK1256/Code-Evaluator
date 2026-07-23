@@ -1,7 +1,7 @@
 FROM node:20-slim AS base
 
-# Install pnpm
-RUN npm install -g pnpm@latest
+# Install pnpm (match package.json packageManager version)
+RUN npm install -g pnpm@9.15.4
 
 FROM base AS deps
 WORKDIR /app
