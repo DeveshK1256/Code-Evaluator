@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npx next *)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/@supabase/ssr/package.json'\\); console.log\\(pkg.version\\);\")",
+      "Bash(pnpm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vitest *)",
+      "Bash(pnpm add *)",
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: resolve TypeScript error in apiError for unknown error type *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'chore: update deprecated next config option *)",
+      "Bash(node -e \"try { const pkg = require\\('inngest/package.json'\\); console.log\\(JSON.stringify\\(pkg.exports || pkg.main, null, 2\\)\\) } catch\\(e\\) { console.log\\(e.message\\) }\")",
+      "Bash(git commit -m 'fix: add missing Inngest serve endpoint for background job processing *)",
+      "Bash(git commit -m 'fix: use valid Upload status enum in ZIP upload progress calls *)",
+      "Bash(git commit -m 'fix: add serveHost and servePath to Inngest endpoint for proper function registration *)",
+      "Bash(curl *)",
+      "WebSearch",
+      "Bash(git commit -m 'fix: replace git clone with GitHub API ZIP download for Vercel compatibility *)",
+      "Bash(git commit -m 'fix: simplify GitHub archive extraction using direct file writes *)",
+      "Bash(git commit -m 'fix: process GitHub imports synchronously instead of via Inngest *)",
+      "Bash(git commit -m 'perf: optimize tech detection with parallel file reads and Set lookup *)",
+      "Bash(git commit -m 'fix: prevent [object Object] errors with defensive string conversion *)",
+      "Bash(fly version *)",
+      "Bash(git commit -m 'chore: add Fly.io deployment config with Dockerfile *)",
+      "Bash(git rm *)",
+      "Bash(rm -f fly.toml)",
+      "Bash(git commit -m 'chore: switch to Render deployment, simplify Dockerfile *)",
+      "Bash(git commit -m 'fix: remove pnpm-lock.yaml from .dockerignore *)",
+      "Bash(pnpm -v)",
+      "Bash(git commit -m 'fix: pin pnpm version in Dockerfile to match lockfile *)",
+      "Bash(git commit -m 'fix: improve Dockerfile robustness for public dir copy *)",
+      "Bash(git commit -m 'fix: ensure public dir exists in Docker build stage *)"
+    ]
+  }
+}
