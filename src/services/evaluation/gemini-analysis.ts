@@ -114,13 +114,13 @@ function fallback(name: string): ModResult {
 
 const cache = { results: null as Record<string, ModResult> | null, key: "", context: "" as string };
 
-function parseContext(repoContext: string) {
+function parseContext(repoContext: string, problemStatement?: string) {
   try {
     const parsed = JSON.parse(repoContext);
     return {
       fileCount: (parsed.fileCount as number) ?? 0,
-      hasReadme: !!(parsed.readme ?? repoContext.includes("README")),
-      hasProblem: !!(parsed.problemStatement ?? false),
+      hasReadme: !!(parsed.problemContext ?? repoContext.includes("README")),
+      hasProblem: !!(problemStatement ?? parsed.problemContext ?? false),
       repoName: (parsed.repositoryName as string) ?? "",
       language: (parsed.repositoryLanguage as string) ?? "",
       fileList: (parsed.fileList as string[]) ?? [],
@@ -217,7 +217,7 @@ export async function getAnalysisForModule(
   context: { repoContext: string; readme?: string; problemStatement?: string; files?: Array<{ path: string; content: string }> }
 ): Promise<ModResult> {
   const key = allModules.map((m) => m.id).sort().join(",");
-  const ctx = parseContext(context.repoContext);
+  const ctx = parseContext(context.repoContext, context.problemStatement);
   if (!cache.results || cache.key !== key || cache.context !== context.repoContext.slice(0, 100)) {
     const aiResults = await analyzeAllModules(allModules, context).catch(() => null);
     if (aiResults) {

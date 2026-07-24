@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) { logger.warn("Failed to fetch repo data", { error: String(e) }); }
 
+    // Add readme and problem statement to intelligence for local scoring
+    if (readme) intelligence.problemContext = readme.slice(0, 1000);
+    if (problemStatement) intelligence.problemContext = problemStatement.slice(0, 1000);
+
     // Fetch manifest for file details
     let fileList: string[] = [];
     try {
