@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingOverlay } from "@/components/common/loading-overlay";
+import Link from "next/link";
 import {
   Brain, CheckCircle2, Loader2, BarChart3, ListChecks,
   Shield, Zap, FileText, GitBranch, Target, ChevronDown,
@@ -40,7 +41,7 @@ export default function EvaluationPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ overallScore: number; overallGrade: string } | null>(null);
+  const [result, setResult] = useState<{ overallScore: number; overallGrade: string; sessionId?: string } | null>(null);
   const [readme, setReadme] = useState("");
   const [problemStatement, setProblemStatement] = useState("");
 
@@ -116,26 +117,15 @@ export default function EvaluationPage() {
         throw new Error(err.error?.message ?? "Evaluation failed");
       }
 
-      setProgress(30);
-      setStatusMessage("Running evaluation modules...");
-
-      // Simulate progressive loading
-      const totalModules = selectedModules.size;
-      let completed = 0;
-      for (const modId of selectedModules) {
-        await new Promise((r) => setTimeout(r, 500));
-        completed++;
-        setProgress(30 + Math.round((completed / totalModules) * 50));
-        setStatusMessage(`Evaluating: ${modules.find((m) => m.id === modId)?.name ?? modId}`);
-      }
-
-      setProgress(90);
-      setStatusMessage("Calculating scores...");
-      await new Promise((r) => setTimeout(r, 500));
+      const data = await res.json();
 
       setProgress(100);
       setStatusMessage("Evaluation complete!");
-      setResult({ overallScore: 82, overallGrade: "B" });
+      setResult({
+        overallScore: data.data?.overallScore ?? data.overallScore ?? 0,
+        overallGrade: data.data?.overallGrade ?? data.overallGrade ?? "N/A",
+        sessionId: data.data?.sessionId ?? data.sessionId,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Evaluation failed");
     } finally {
@@ -194,6 +184,13 @@ export default function EvaluationPage() {
                 <p className="text-4xl font-bold text-primary">{result.overallGrade}</p>
               </div>
             </div>
+            {result.sessionId && (
+              <div className="mt-4">
+                <Link href={`/reports/${result.sessionId}`}>
+                  <Button variant="outline">View Full Report</Button>
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
