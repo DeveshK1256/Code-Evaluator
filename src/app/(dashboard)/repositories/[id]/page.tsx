@@ -336,13 +336,17 @@ export default function RepositoryDetailPage({
                   {analysisError}
                 </div>
               )}
+
+              {availModules.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-2">Loading modules...</div>
+              )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setAnalysisOpen(false)} disabled={analysisLoading}>
                 Cancel
               </Button>
-              <Button onClick={handleStartAnalysis} disabled={selectedModules.size === 0 || analysisLoading}>
+              <Button onClick={handleStartAnalysis} disabled={availModules.length > 0 && selectedModules.size === 0 || analysisLoading}>
                 {analysisLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...</> : "Run Analysis"}
               </Button>
             </DialogFooter>
