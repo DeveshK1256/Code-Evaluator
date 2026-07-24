@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { AppError } from "@/lib/utils/errors";
 import { getAuthenticatedUser } from "@/lib/auth/api-auth";
 import { getSupabaseAdminClient } from "@/lib/auth/supabase-admin";
 
@@ -13,7 +14,6 @@ export async function GET(request: NextRequest) {
     const repositoryId = url.searchParams.get("repositoryId");
 
     if (sessionId) {
-      // Fetch single session with all results
       const { data: session, error: sessionError } = await supabase
         .from("evaluation_sessions" as never)
         .select("*")
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (sessionError || !session) {
-        return apiError({ code: "NOT_FOUND", message: "Evaluation session not found", statusCode: 404 } as never);
+        return apiError(new AppError("NOT_FOUND", "Evaluation session not found", 404));
       }
 
       const { data: moduleResults } = await supabase
@@ -34,8 +34,7 @@ export async function GET(request: NextRequest) {
         .from("recommendations" as never)
         .select("*")
         .eq("session_id", sessionId)
-        .order("priority", { ascending: false })
-        .order("severity" as never, { ascending: false });
+        .order("priority", { ascending: false });
 
       return apiSuccess({
         session: (session as Record<string, unknown>),
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch all sessions for user, optionally filtered by repository
     let query = supabase
       .from("evaluation_sessions" as never)
       .select("*")
