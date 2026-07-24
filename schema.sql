@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS repository_manifests (
   technologies JSONB DEFAULT '{}',
   dependencies JSONB DEFAULT '[]',
   configuration JSONB DEFAULT '{}',
+  file_summary JSONB DEFAULT '{}',
   generated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
