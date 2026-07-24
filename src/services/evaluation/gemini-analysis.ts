@@ -65,11 +65,10 @@ ${filesSection}
 
 Return valid JSON with one key per criteria containing all fields.`;
 
-  const schema: Record<string, unknown> = { type: "object", properties: {}, required: [] as string[] };
-  for (const m of modules) {
-    schema.properties![m.id] = MOD_SCHEMA;
-    (schema.required as string[]).push(m.id);
-  }
+  const props: Record<string, unknown> = {};
+  const req: string[] = [];
+  for (const m of modules) { props[m.id] = MOD_SCHEMA; req.push(m.id); }
+  const schema: Record<string, unknown> = { type: "object", properties: props, required: req };
 
   try {
     const response = await callGeminiWithRetry({
