@@ -7,7 +7,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "Optimized for Google Solution Challenge judging criteria",
     isDefault: true,
     weights: {
-      code_quality: 0.10, security: 0.10, performance: 0.05, testing: 0.10,
+      efficiency: 0.05, code_quality: 0.10, security: 0.10, performance: 0.05, testing: 0.10,
       accessibility: 0.10, google_services: 0.20, problem_alignment: 0.25,
       architecture: 0.05, documentation: 0.05,
       maintainability: 0, scalability: 0, technical_debt: 0, dependency_health: 0,
@@ -22,7 +22,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "Optimized for early-stage startup products",
     isDefault: false,
     weights: {
-      code_quality: 0.05, security: 0.10, performance: 0.05, testing: 0.05,
+      efficiency: 0.05, code_quality: 0.05, security: 0.10, performance: 0.05, testing: 0.05,
       accessibility: 0.05, google_services: 0.05, problem_alignment: 0.20,
       architecture: 0.15, documentation: 0.05,
       maintainability: 0.15, scalability: 0.10, technical_debt: 0, dependency_health: 0,
@@ -37,7 +37,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "Comprehensive enterprise-grade evaluation",
     isDefault: false,
     weights: {
-      code_quality: 0.05, security: 0.25, performance: 0.10, testing: 0.15,
+      efficiency: 0.05, code_quality: 0.05, security: 0.25, performance: 0.10, testing: 0.15,
       accessibility: 0.05, google_services: 0, problem_alignment: 0,
       architecture: 0.15, documentation: 0.05,
       maintainability: 0.05, scalability: 0.10, technical_debt: 0.05, dependency_health: 0.05,
@@ -52,7 +52,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "For university and hackathon project evaluation",
     isDefault: false,
     weights: {
-      code_quality: 0.15, security: 0.05, performance: 0.05, testing: 0.10,
+      efficiency: 0.05, code_quality: 0.15, security: 0.05, performance: 0.05, testing: 0.10,
       accessibility: 0.05, google_services: 0.05, problem_alignment: 0.25,
       architecture: 0.10, documentation: 0.15,
       maintainability: 0.05, scalability: 0, technical_debt: 0, dependency_health: 0,
@@ -67,7 +67,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "Prioritizes security evaluation above all",
     isDefault: false,
     weights: {
-      code_quality: 0.05, security: 0.40, performance: 0.05, testing: 0.10,
+      efficiency: 0.05, code_quality: 0.05, security: 0.40, performance: 0.05, testing: 0.10,
       accessibility: 0.05, google_services: 0, problem_alignment: 0,
       architecture: 0.10, documentation: 0.05,
       maintainability: 0.05, scalability: 0.05, technical_debt: 0.05, dependency_health: 0.10,
@@ -82,7 +82,7 @@ export const EVALUATION_PROFILES: EvaluationProfile[] = [
     description: "Well-rounded evaluation across all dimensions",
     isDefault: false,
     weights: {
-      code_quality: 0.10, security: 0.15, performance: 0.08, testing: 0.10,
+      efficiency: 0.05, code_quality: 0.10, security: 0.15, performance: 0.08, testing: 0.10,
       accessibility: 0.08, google_services: 0.05, problem_alignment: 0.10,
       architecture: 0.08, documentation: 0.05,
       maintainability: 0.05, scalability: 0.05, technical_debt: 0.03, dependency_health: 0.03,
