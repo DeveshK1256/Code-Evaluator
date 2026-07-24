@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerEnv } from "@/lib/utils/env";
 import { logger } from "@/lib/logger";
 
-const DEFAULT_MODEL = "gemini-2.5-pro-exp-03-25";
+const DEFAULT_MODEL = "gemini-2.0-flash";
 const MAX_RETRIES = 3;
 
 interface GeminiRequest {
