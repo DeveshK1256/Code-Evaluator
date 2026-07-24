@@ -107,8 +107,15 @@ export default function RepositoryDetailPage({
     });
   };
 
+  const problemStatementRequired = selectedModules.has("problem_alignment");
+  const canStartAnalysis = selectedModules.size > 0 && (!problemStatementRequired || problemStatement.trim().length > 0);
+
   const handleStartAnalysis = async () => {
     if (selectedModules.size === 0) return;
+    if (problemStatementRequired && !problemStatement.trim()) {
+      setAnalysisError("Problem Statement is required when Problem Statement Alignment is selected.");
+      return;
+    }
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
@@ -321,14 +328,20 @@ export default function RepositoryDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="problem">Problem Statement (optional)</Label>
+                <Label htmlFor="problem">
+                  Problem Statement {problemStatementRequired && <span className="text-destructive">*</span>} (optional)
+                </Label>
                 <Textarea
                   id="problem"
-                  placeholder="Describe the problem your project solves..."
+                  placeholder={problemStatementRequired ? "Required when Problem Statement Alignment is selected..." : "Describe the problem your project solves..."}
                   value={problemStatement}
                   onChange={(e) => setProblemStatement(e.target.value)}
                   rows={2}
+                  className={problemStatementRequired && !problemStatement.trim() ? "border-destructive" : ""}
                 />
+                {problemStatementRequired && !problemStatement.trim() && (
+                  <p className="text-xs text-destructive">Required when Problem Statement Alignment is selected.</p>
+                )}
               </div>
 
               {analysisError && (
@@ -348,7 +361,7 @@ export default function RepositoryDetailPage({
               <Button variant="outline" onClick={() => setAnalysisOpen(false)} disabled={analysisLoading}>
                 Cancel
               </Button>
-              <Button onClick={handleStartAnalysis} disabled={availModules.length > 0 && selectedModules.size === 0 || analysisLoading}>
+              <Button onClick={handleStartAnalysis} disabled={!canStartAnalysis || analysisLoading}>
                 {analysisLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...</> : "Run Analysis"}
               </Button>
             </DialogFooter>
