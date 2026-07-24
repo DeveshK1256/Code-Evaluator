@@ -10,8 +10,16 @@ import { Breadcrumb } from "@/components/common/breadcrumb";
 import { LoadingOverlay } from "@/components/common/loading-overlay";
 import { ErrorState } from "@/components/common/error-state";
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
   ArrowLeft, Github, Upload, Clock, FileText, Star,
   GitFork, GitBranch, AlertCircle, CheckCircle2, Loader2,
+  Play,
 } from "lucide-react";
 import type { Repository, TechnologyItem } from "@/types/repository";
 
@@ -40,6 +48,13 @@ export default function RepositoryDetailPage({
   const [technologies, setTechnologies] = useState<TechnologyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [availModules, setAvailModules] = useState<Array<{ id: string; name: string; description: string }>>([]);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
+  const [readme, setReadme] = useState("");
+  const [problemStatement, setProblemStatement] = useState("");
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -70,12 +85,62 @@ export default function RepositoryDetailPage({
     }
   };
 
+  // Fetch available evaluation modules
+  useEffect(() => {
+    fetch("/api/v1/evaluation")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data?.modules) {
+          setAvailModules(json.data.modules);
+          setSelectedModules(new Set(json.data.modules.map((m: { id: string }) => m.id)));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleModule = (moduleId: string) => {
+    setSelectedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) next.delete(moduleId);
+      else next.add(moduleId);
+      return next;
+    });
+  };
+
+  const handleStartAnalysis = async () => {
+    if (selectedModules.size === 0) return;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const res = await fetch("/api/v1/evaluation/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repositoryId: id,
+          selectedModules: Array.from(selectedModules),
+          readme: readme || undefined,
+          problemStatement: problemStatement || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error?.message ?? "Failed to start analysis");
+      }
+      setAnalysisOpen(false);
+      if (repo) setRepo({ ...repo, status: "analysis_running", progress: 10, statusMessage: "Analysis queued..." });
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : "Failed to start analysis");
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   useEffect(() => { fetchData(); }, [id]);
 
   // Poll for progress updates
   useEffect(() => {
     if (!repo) return;
-    if (repo.progress >= 100 || repo.status === "failed" || repo.status === "ready_for_analysis") return;
+    if (repo.progress >= 100 || repo.status === "failed" || repo.status === "ready_for_analysis" || repo.status === "evaluation_complete") return;
 
     const interval = setInterval(async () => {
       try {
@@ -201,6 +266,89 @@ export default function RepositoryDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Start Analysis */}
+      {repo.status === "ready_for_analysis" && (
+        <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="w-full">
+              <Play className="h-5 w-5 mr-2" />
+              Start Analysis
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Start Analysis</DialogTitle>
+              <DialogDescription>
+                Select the evaluation criteria to analyze your repository against.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Modules */}
+              <div className="space-y-3">
+                <Label>Evaluation Criteria</Label>
+                {availModules.map((mod) => (
+                  <label
+                    key={mod.id}
+                    className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={selectedModules.has(mod.id)}
+                      onChange={() => toggleModule(mod.id)}
+                    />
+                    <div>
+                      <div className="font-medium text-sm">{mod.name}</div>
+                      {mod.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{mod.description}</div>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Optional inputs */}
+              <div className="space-y-2">
+                <Label htmlFor="readme">README (optional)</Label>
+                <Textarea
+                  id="readme"
+                  placeholder="Paste your README content for better context..."
+                  value={readme}
+                  onChange={(e) => setReadme(e.target.value)}
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="problem">Problem Statement (optional)</Label>
+                <Textarea
+                  id="problem"
+                  placeholder="Describe the problem your project solves..."
+                  value={problemStatement}
+                  onChange={(e) => setProblemStatement(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              {analysisError && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+                  {analysisError}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAnalysisOpen(false)} disabled={analysisLoading}>
+                Cancel
+              </Button>
+              <Button onClick={handleStartAnalysis} disabled={selectedModules.size === 0 || analysisLoading}>
+                {analysisLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...</> : "Run Analysis"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Technologies */}
       {technologies.length > 0 && (
