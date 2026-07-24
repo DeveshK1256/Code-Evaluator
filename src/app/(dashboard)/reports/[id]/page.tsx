@@ -180,13 +180,13 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                           {rec.severity as string}
                         </Badge>
                       </div>
-                      {rec.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{rec.description as string}</p>
+                      {(rec.description != null && rec.description !== "") && (
+                        <p className="text-xs text-muted-foreground mt-1">{String(rec.description)}</p>
                       )}
-                      {(rec.estimated_effort as string) && (
+                      {(rec.estimated_effort != null && rec.estimated_effort !== "") && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Effort: <span className="font-medium">{rec.estimated_effort as string}</span>
-                          {rec.expected_improvement != null && ` · +${rec.expected_improvement as number} pts`}
+                          Effort: <span className="font-medium">{String(rec.estimated_effort)}</span>
+                          {rec.expected_improvement != null && ` · +${Number(rec.expected_improvement)} pts`}
                         </p>
                       )}
                     </div>
