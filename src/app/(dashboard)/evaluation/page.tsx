@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/common/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingOverlay } from "@/components/common/loading-overlay";
@@ -34,6 +35,8 @@ export default function EvaluationPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ overallScore: number; overallGrade: string } | null>(null);
+  const [readme, setReadme] = useState("");
+  const [problemStatement, setProblemStatement] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,8 +68,14 @@ export default function EvaluationPage() {
     setSelectedModules(next);
   };
 
+  const problemStatementRequired = selectedModules.has("problem_alignment");
+
   const runEvaluation = async () => {
     if (selectedModules.size === 0) return;
+    if (problemStatementRequired && !problemStatement.trim()) {
+      setError("Problem Statement is required when Problem Statement Alignment is selected.");
+      return;
+    }
     setIsRunning(true);
     setError(null);
     setProgress(10);
@@ -80,6 +89,8 @@ export default function EvaluationPage() {
           repositoryId: "placeholder-repo-id",
           profileId: selectedProfile,
           selectedModules: Array.from(selectedModules),
+          readme: readme || undefined,
+          problemStatement: problemStatement || undefined,
         }),
       });
 
@@ -199,6 +210,42 @@ export default function EvaluationPage() {
                 .join(", ")}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Context Inputs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Context</CardTitle>
+          <CardDescription>Provide additional context for more accurate evaluation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="eval-readme">README (optional)</Label>
+            <Textarea
+              id="eval-readme"
+              placeholder="Paste your README content for better context..."
+              value={readme}
+              onChange={(e) => setReadme(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="eval-problem">
+              Problem Statement {problemStatementRequired && <span className="text-destructive">*</span>}
+            </Label>
+            <Textarea
+              id="eval-problem"
+              placeholder={problemStatementRequired ? "Required when Problem Alignment is selected..." : "Describe the problem your project solves..."}
+              value={problemStatement}
+              onChange={(e) => setProblemStatement(e.target.value)}
+              rows={3}
+              className={problemStatementRequired && !problemStatement.trim() ? "border-destructive" : ""}
+            />
+            {problemStatementRequired && !problemStatement.trim() && (
+              <p className="text-xs text-destructive">Required when Problem Statement Alignment is selected.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
