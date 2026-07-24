@@ -337,9 +337,11 @@ export default function RepositoryDetailPage({
                 </div>
               )}
 
-              {availModules.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-2">Loading modules...</div>
-              )}
+              {availModules.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No evaluation modules available. The repository must be fully processed first.
+                </div>
+              ) : null}
             </div>
 
             <DialogFooter>
