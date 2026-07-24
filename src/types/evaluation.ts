@@ -2,6 +2,7 @@
 export type ModuleId =
   | "code_quality" | "security" | "performance" | "testing"
   | "accessibility" | "google_services" | "problem_alignment"
+  | "efficiency"
   | "architecture" | "documentation" | "maintainability"
   | "scalability" | "technical_debt" | "dependency_health"
   | "api_design" | "database_design" | "devops"

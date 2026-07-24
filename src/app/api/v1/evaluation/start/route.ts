@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
 
     const result = await evaluationOrchestrator.run({
       repositoryId,
-      userId,
+      intelligence: {},
       readme,
       problemStatement,
-      selectedModules: selectedModules,
+      selectedModules: selectedModules as import("@/types/evaluation").ModuleId[],
       profileId,
     });
 
