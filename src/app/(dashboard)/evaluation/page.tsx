@@ -13,7 +13,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { LoadingOverlay } from "@/components/common/loading-overlay";
 import {
   Brain, CheckCircle2, Loader2, BarChart3, ListChecks,
-  Shield, Zap, FileText, GitBranch, Target,
+  Shield, Zap, FileText, GitBranch, Target, ChevronDown,
 } from "lucide-react";
 
 interface ModuleDef {
@@ -24,9 +24,15 @@ interface ProfileDef {
   id: string; name: string; description: string; isDefault: boolean; weights: Record<string, number>;
 }
 
+interface RepoOption {
+  id: string; name: string; source: string; status: string;
+}
+
 export default function EvaluationPage() {
   const [modules, setModules] = useState<ModuleDef[]>([]);
   const [profiles, setProfiles] = useState<ProfileDef[]>([]);
+  const [repos, setRepos] = useState<RepoOption[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState("");
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const [selectedProfile, setSelectedProfile] = useState<string>("balanced");
   const [isRunning, setIsRunning] = useState(false);
@@ -41,13 +47,24 @@ export default function EvaluationPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/v1/evaluation");
-        if (!res.ok) throw new Error("Failed to load");
-        const json = await res.json();
-        setModules(json.data?.modules ?? []);
-        setProfiles(json.data?.profiles ?? []);
-        // Select all by default
-        setSelectedModules(new Set((json.data?.modules ?? []).map((m: ModuleDef) => m.id)));
+        const [evalRes, repoRes] = await Promise.all([
+          fetch("/api/v1/evaluation"),
+          fetch("/api/v1/repositories"),
+        ]);
+        if (!evalRes.ok) throw new Error("Failed to load");
+        const evalJson = await evalRes.json();
+        setModules(evalJson.data?.modules ?? []);
+        setProfiles(evalJson.data?.profiles ?? []);
+
+        if (repoRes.ok) {
+          const repoJson = await repoRes.json();
+          const readyRepos = (repoJson.data?.repositories ?? [])
+            .filter((r: RepoOption) => r.status === "ready_for_analysis" || r.status === "evaluation_complete");
+          setRepos(readyRepos);
+          if (readyRepos.length > 0) setSelectedRepoId(readyRepos[0].id);
+        }
+
+        setSelectedModules(new Set((evalJson.data?.modules ?? []).map((m: ModuleDef) => m.id)));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
       } finally {
@@ -86,7 +103,7 @@ export default function EvaluationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          repositoryId: "placeholder-repo-id",
+          repositoryId: selectedRepoId,
           profileId: selectedProfile,
           selectedModules: Array.from(selectedModules),
           readme: readme || undefined,
@@ -180,6 +197,38 @@ export default function EvaluationPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Repository Selector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Select Repository</CardTitle>
+          <CardDescription>Choose a repository to evaluate</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {repos.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-2">
+              No ready repositories found.{' '}
+              <a href="/analysis" className="text-primary hover:underline">Import one first</a>.
+            </div>
+          ) : (
+            <div className="relative">
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={selectedRepoId}
+                onChange={(e) => setSelectedRepoId(e.target.value)}
+                disabled={isRunning}
+              >
+                {repos.map((repo) => (
+                  <option key={repo.id} value={repo.id}>
+                    {repo.name} ({repo.source})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Evaluation Profile */}
       <Card>
