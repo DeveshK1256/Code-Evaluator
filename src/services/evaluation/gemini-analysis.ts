@@ -191,15 +191,52 @@ function localScore(moduleId: string, ctx: ReturnType<typeof parseContext>, prob
       break;
     }
     case "problem_alignment": {
-      if (hasProblem) {
-        score += 20;
-        strengths.push({ title: "Problem Defined", description: "Problem statement provided, enabling alignment evaluation.", severity: "high", category: "requirements", evidence: ["Problem statement"] });
+      if (hasProblem && problemStatement) {
+        // Extract meaningful keywords from problem statement (words longer than 3 chars, excluding common words)
+        const stopWords = new Set(["this", "that", "with", "from", "have", "been", "will", "were", "they", "their", "what", "when", "where", "which", "would", "could", "should", "about", "there", "into", "over", "such", "only", "than", "then", "also", "very", "just", "more", "some", "these", "those", "being", "made", "make", "made", "well", "used", "use", "using", "project", "application", "system", "software", "tool", "platform", "solution", "build", "create", "develop", "implement", "design", "provide", "support", "manage", "need", "want", "must", "can", "will", "way", "new", "one", "two", "like", "part", "each", "other", "many", "much"]);
+        const words = problemStatement.toLowerCase()
+          .replace(/[^a-z0-9\s]/g, "")
+          .split(/\s+/)
+          .filter((w) => w.length > 3 && !stopWords.has(w));
+        const uniqueTerms = [...new Set(words)];
+
+        // Search for these terms in file names, topics, language, and file contents
+        const searchSpace = [
+          ctx.repoName.toLowerCase(),
+          ctx.language.toLowerCase(),
+          ...ctx.topics.map((t) => t.toLowerCase()),
+          ...fileListStr.toLowerCase(),
+          ...(files ?? []).map((f) => f.path.toLowerCase()),
+          ...(files ?? []).flatMap((f) => f.content.toLowerCase().split(/\s+/).filter((w) => w.length > 4)),
+        ].join(" ");
+
+        let matches = 0;
+        const matchedTerms: string[] = [];
+        for (const term of uniqueTerms) {
+          if (searchSpace.includes(term)) {
+            matches++;
+            matchedTerms.push(term);
+          }
+        }
+
+        const matchRatio = uniqueTerms.length > 0 ? matches / uniqueTerms.length : 0.5;
+        score += Math.round(matchRatio * 40); // 0-40 bonus based on match quality
+        score -= Math.round((1 - matchRatio) * 15); // penalty for mismatch
+
+        if (matchRatio > 0.6) {
+          strengths.push({ title: "Strong Problem Alignment", description: `Problem statement keywords match the codebase well (${Math.round(matchRatio * 100)}% match). Key terms: ${matchedTerms.slice(0, 5).join(", ")}.`, severity: "high", category: "alignment", evidence: [`${Math.round(matchRatio * 100)}% keyword match`] });
+        } else if (matchRatio > 0.3) {
+          strengths.push({ title: "Partial Problem Alignment", description: `Some problem statement keywords found in the codebase (${Math.round(matchRatio * 100)}% match).`, severity: "medium", category: "alignment", evidence: [`${Math.round(matchRatio * 100)}% keyword match`] });
+          weaknesses.push({ title: "Alignment Gaps", description: `Several problem keywords not reflected in code: ${uniqueTerms.filter((t) => !matchedTerms.includes(t)).slice(0, 5).join(", ")}.`, severity: "medium", category: "alignment", evidence: ["Missing terms"] });
+        } else {
+          weaknesses.push({ title: "Weak Problem Alignment", description: `Only ${Math.round(matchRatio * 100)}% of problem keywords found in the codebase. The implementation may not fully address the stated problem.`, severity: "high", category: "alignment", evidence: [`${Math.round(matchRatio * 100)}% match`] });
+          recommendations.push({ title: "Improve Problem-Code Alignment", description: "Refine the implementation to better address the problem statement.", severity: "high", suggestedFix: "Review the problem statement and ensure core features directly address each aspect.", effort: "days", scoreImprovement: 20 });
+        }
       } else {
-        score -= 20;
-        weaknesses.push({ title: "No Problem Statement", description: "Missing problem statement. Alignment cannot be assessed.", severity: "high", category: "requirements", evidence: ["Not provided"] });
+        score -= 25;
+        weaknesses.push({ title: "No Problem Statement", description: "Missing problem statement. Alignment cannot be assessed. Provide a problem statement for accurate evaluation.", severity: "high", category: "requirements", evidence: ["Not provided"] });
         recommendations.push({ title: "Define Problem Statement", description: "Provide a clear problem statement for alignment evaluation.", severity: "medium", suggestedFix: "Add a problem statement describing what the project solves.", effort: "hours", scoreImprovement: 20 });
       }
-      if (hasReadme && hasProblem) { score += 5; }
       break;
     }
   }
