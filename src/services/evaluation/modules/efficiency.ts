@@ -1,43 +1,32 @@
 import { BaseEvaluationModule, type ModuleInput } from "@/services/evaluation/base-module";
 import type { Finding, Risk, Recommendation, ModuleResult } from "@/types/evaluation";
+import { analyzeWithGemini, findingsToModuleFindings, recommendationsToModuleRecs } from "@/services/evaluation/gemini-analysis";
 
 export class EfficiencyModule extends BaseEvaluationModule {
-  readonly moduleId = "efficiency";
+  readonly moduleId = "efficiency" as const;
   readonly moduleName = "Efficiency";
-  readonly description = "Evaluates code performance, caching, database queries, and resource usage";
+  readonly description = "Evaluates code performance, caching strategies, database queries, resource usage, and algorithmic efficiency";
   readonly version = "1.0";
 
-  async evaluate(input: ModuleInput): Promise<ModuleResult> {
-    return this.buildResult(input);
+  async evaluate(input: ModuleInput): Promise<ModuleResult> { return this.buildResult(input); }
+
+  private _g: Awaited<ReturnType<typeof analyzeWithGemini>> | null = null;
+  private async g(input: ModuleInput) {
+    if (!this._g) this._g = await analyzeWithGemini({ moduleName: this.moduleName, moduleDescription: this.description, repoContext: JSON.stringify(input.intelligence).slice(0, 2000), readme: input.readme, problemStatement: input.problemStatement, files: input.files });
+    return this._g;
   }
 
-  async buildStrengths(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Efficient Data Structures", "Use of appropriate data structures for the task", "medium",
-        [this.evidence("Common patterns indicate standard data structure usage", undefined, "inferred")], "performance"),
-    ];
+  async buildStrengths(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.strengths, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildWeaknesses(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Potential Performance Bottlenecks", "Review loops and data access patterns for optimization", "medium",
-        [this.evidence("Automated review recommended for critical paths", undefined, "inferred", "low")], "performance"),
-    ];
+  async buildWeaknesses(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.weaknesses, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildRisks(_input: ModuleInput): Promise<Risk[]> {
-    return [
-      this.risk("Scalability Concerns", "As data grows, current patterns may not scale linearly", "medium", "medium", "Profile and benchmark critical paths"),
-    ];
+  async buildRisks(input: ModuleInput): Promise<Risk[]> {
+    const a = await this.g(input); return a.risks.map((r) => this.risk(r.title, r.description, r.likelihood as any, r.impact as any, r.mitigation));
   }
-
-  async buildRecommendations(_input: ModuleInput): Promise<Recommendation[]> {
-    return [
-      this.recommendation("Add Caching", "Implement caching for frequently accessed data", "medium", "Add cache layer (Redis, in-memory) for repeated operations", "days", 8),
-    ];
+  async buildRecommendations(input: ModuleInput): Promise<Recommendation[]> {
+    const a = await this.g(input); return recommendationsToModuleRecs(a.recommendations, this.moduleId);
   }
-
-  calculateScore(_strengths: Finding[], _weaknesses: Finding[], _risks: Risk[]): number {
-    return 70;
-  }
+  calculateScore(_s: Finding[], _w: Finding[], _r: Risk[]): number { return this._g?.score ?? 50; }
 }

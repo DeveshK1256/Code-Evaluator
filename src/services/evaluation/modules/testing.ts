@@ -1,44 +1,32 @@
 import { BaseEvaluationModule, type ModuleInput } from "@/services/evaluation/base-module";
 import type { Finding, Risk, Recommendation, ModuleResult } from "@/types/evaluation";
+import { analyzeWithGemini, findingsToModuleFindings, recommendationsToModuleRecs } from "@/services/evaluation/gemini-analysis";
 
 export class TestingModule extends BaseEvaluationModule {
-  readonly moduleId = "testing";
+  readonly moduleId = "testing" as const;
   readonly moduleName = "Testing";
-  readonly description = "Evaluates test coverage, test types, and testing best practices";
+  readonly description = "Evaluates test coverage, unit tests, integration tests, E2E tests, testing frameworks, and QA practices";
   readonly version = "1.0";
 
-  async evaluate(input: ModuleInput): Promise<ModuleResult> {
-    return this.buildResult(input);
+  async evaluate(input: ModuleInput): Promise<ModuleResult> { return this.buildResult(input); }
+
+  private _g: Awaited<ReturnType<typeof analyzeWithGemini>> | null = null;
+  private async g(input: ModuleInput) {
+    if (!this._g) this._g = await analyzeWithGemini({ moduleName: this.moduleName, moduleDescription: this.description, repoContext: JSON.stringify(input.intelligence).slice(0, 2000), readme: input.readme, problemStatement: input.problemStatement, files: input.files });
+    return this._g;
   }
 
-  async buildStrengths(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Test Structure", "Testing files are organized following project structure", "low",
-        [this.evidence("Test directories detected in project structure", undefined, "deterministic")], "testing"),
-    ];
+  async buildStrengths(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.strengths, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildWeaknesses(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Insufficient Test Coverage", "Comprehensive testing is recommended for all business logic", "high",
-        [this.evidence("Manual review needed to verify test completeness", undefined, "inferred", "low")], "testing"),
-    ];
+  async buildWeaknesses(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.weaknesses, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildRisks(_input: ModuleInput): Promise<Risk[]> {
-    return [
-      this.risk("Regression Risk", "Without comprehensive tests, changes may break existing functionality", "high", "high", "Add unit, integration, and E2E tests"),
-    ];
+  async buildRisks(input: ModuleInput): Promise<Risk[]> {
+    const a = await this.g(input); return a.risks.map((r) => this.risk(r.title, r.description, r.likelihood as any, r.impact as any, r.mitigation));
   }
-
-  async buildRecommendations(_input: ModuleInput): Promise<Recommendation[]> {
-    return [
-      this.recommendation("Add Unit Tests", "Achieve at least 80% unit test coverage", "high", "Add unit tests for all business logic and utilities", "weeks", 15),
-      this.recommendation("Add Integration Tests", "Test critical user flows end-to-end", "medium", "Add integration tests for main features", "days", 10),
-    ];
+  async buildRecommendations(input: ModuleInput): Promise<Recommendation[]> {
+    const a = await this.g(input); return recommendationsToModuleRecs(a.recommendations, this.moduleId);
   }
-
-  calculateScore(_strengths: Finding[], _weaknesses: Finding[], _risks: Risk[]): number {
-    return 50;
-  }
+  calculateScore(_s: Finding[], _w: Finding[], _r: Risk[]): number { return this._g?.score ?? 50; }
 }

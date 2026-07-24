@@ -1,58 +1,32 @@
 import { BaseEvaluationModule, type ModuleInput } from "@/services/evaluation/base-module";
 import type { Finding, Risk, Recommendation, ModuleResult } from "@/types/evaluation";
+import { analyzeWithGemini, findingsToModuleFindings, recommendationsToModuleRecs } from "@/services/evaluation/gemini-analysis";
 
 export class SecurityModule extends BaseEvaluationModule {
-  readonly moduleId = "security";
+  readonly moduleId = "security" as const;
   readonly moduleName = "Security";
-  readonly description = "Evaluates authentication, authorization, input validation, OWASP Top 10";
+  readonly description = "Evaluates authentication, authorization, input validation, OWASP Top 10, data protection, and secure configuration";
   readonly version = "1.0";
 
-  async evaluate(input: ModuleInput): Promise<ModuleResult> {
-    return this.buildResult(input);
+  async evaluate(input: ModuleInput): Promise<ModuleResult> { return this.buildResult(input); }
+
+  private _g: Awaited<ReturnType<typeof analyzeWithGemini>> | null = null;
+  private async g(input: ModuleInput) {
+    if (!this._g) this._g = await analyzeWithGemini({ moduleName: this.moduleName, moduleDescription: this.description, repoContext: JSON.stringify(input.intelligence).slice(0, 2000), readme: input.readme, problemStatement: input.problemStatement, files: input.files });
+    return this._g;
   }
 
-  async buildStrengths(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Authentication Implementation", "Authentication system is present and structured", "high",
-        [this.evidence("Auth-related files detected", "src/features/auth/", "deterministic")], "authentication"),
-    ];
+  async buildStrengths(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.strengths, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildWeaknesses(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Input Validation Gaps", "Request body handling should be reviewed for validation", "high",
-        [this.evidence("API routes detected - validate request handling", "src/app/api/", "inferred", "medium")], "input_validation"),
-    ];
+  async buildWeaknesses(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.weaknesses, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildRisks(_input: ModuleInput): Promise<Risk[]> {
-    return [
-      this.risk("Insufficient Input Validation", "Missing request validation can lead to injection attacks",
-        "medium", "high", "Use Zod schemas to validate all API inputs"),
-      this.risk("Dependency Vulnerabilities", "Outdated packages may contain known vulnerabilities",
-        "medium", "high", "Run npm audit regularly and update dependencies"),
-    ];
+  async buildRisks(input: ModuleInput): Promise<Risk[]> {
+    const a = await this.g(input); return a.risks.map((r) => this.risk(r.title, r.description, r.likelihood as any, r.impact as any, r.mitigation));
   }
-
-  async buildRecommendations(_input: ModuleInput): Promise<Recommendation[]> {
-    return [
-      this.recommendation("Implement Comprehensive Input Validation",
-        "Add Zod validation schemas to all API routes to prevent injection attacks", "high",
-        "Create Zod schemas for every API route's request body and query parameters", "hours", 12),
-      this.recommendation("Configure Security Headers",
-        "Add CSP, HSTS, and other security headers", "medium",
-        "Configure next.config.js with security headers", "hours", 5),
-    ];
+  async buildRecommendations(input: ModuleInput): Promise<Recommendation[]> {
+    const a = await this.g(input); return recommendationsToModuleRecs(a.recommendations, this.moduleId);
   }
-
-  calculateScore(_strengths: Finding[], weaknesses: Finding[], risks: Risk[]): number {
-    const baseScore = 75;
-    const weaknessPenalty = weaknesses.length * 5;
-    const riskPenalty = risks.length * 3;
-    return Math.max(0, baseScore - weaknessPenalty - riskPenalty);
-  }
-
-  protected override identifyMissingPractices(_input: ModuleInput): string[] {
-    return ["Security headers configuration", "Rate limiting implementation", "CSP policy"];
-  }
+  calculateScore(_s: Finding[], _w: Finding[], _r: Risk[]): number { return this._g?.score ?? 50; }
 }

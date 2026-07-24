@@ -1,44 +1,32 @@
 import { BaseEvaluationModule, type ModuleInput } from "@/services/evaluation/base-module";
 import type { Finding, Risk, Recommendation, ModuleResult } from "@/types/evaluation";
+import { analyzeWithGemini, findingsToModuleFindings, recommendationsToModuleRecs } from "@/services/evaluation/gemini-analysis";
 
 export class AccessibilityModule extends BaseEvaluationModule {
-  readonly moduleId = "accessibility";
+  readonly moduleId = "accessibility" as const;
   readonly moduleName = "Accessibility";
-  readonly description = "Evaluates UI/UX accessibility, screen reader support, color contrast, keyboard navigation";
+  readonly description = "Evaluates WCAG compliance, screen reader support, keyboard navigation, color contrast, and inclusive design";
   readonly version = "1.0";
 
-  async evaluate(input: ModuleInput): Promise<ModuleResult> {
-    return this.buildResult(input);
+  async evaluate(input: ModuleInput): Promise<ModuleResult> { return this.buildResult(input); }
+
+  private _g: Awaited<ReturnType<typeof analyzeWithGemini>> | null = null;
+  private async g(input: ModuleInput) {
+    if (!this._g) this._g = await analyzeWithGemini({ moduleName: this.moduleName, moduleDescription: this.description, repoContext: JSON.stringify(input.intelligence).slice(0, 2000), readme: input.readme, problemStatement: input.problemStatement, files: input.files });
+    return this._g;
   }
 
-  async buildStrengths(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Modern UI Framework Usage", "Project uses modern components that support accessibility", "low",
-        [this.evidence("Framework-level accessibility features are available", undefined, "inferred")], "accessibility"),
-    ];
+  async buildStrengths(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.strengths, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildWeaknesses(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Accessibility Audit Needed", "Automated accessibility scanning is recommended", "medium",
-        [this.evidence("Manual audit required for WCAG compliance", undefined, "inferred", "low")], "accessibility"),
-    ];
+  async buildWeaknesses(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.g(input); return findingsToModuleFindings(a.weaknesses, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
-
-  async buildRisks(_input: ModuleInput): Promise<Risk[]> {
-    return [
-      this.risk("User Exclusion", "Poor accessibility excludes users with disabilities", "medium", "high", "Conduct accessibility audit and fix WCAG violations"),
-    ];
+  async buildRisks(input: ModuleInput): Promise<Risk[]> {
+    const a = await this.g(input); return a.risks.map((r) => this.risk(r.title, r.description, r.likelihood as any, r.impact as any, r.mitigation));
   }
-
-  async buildRecommendations(_input: ModuleInput): Promise<Recommendation[]> {
-    return [
-      this.recommendation("Add ARIA Labels", "Ensure all interactive elements have proper ARIA labels", "medium", "Review and add ARIA labels to buttons, forms, and navigation", "days", 7),
-      this.recommendation("Keyboard Navigation", "Ensure all features are accessible via keyboard", "medium", "Test and fix keyboard navigation for all user flows", "days", 7),
-    ];
+  async buildRecommendations(input: ModuleInput): Promise<Recommendation[]> {
+    const a = await this.g(input); return recommendationsToModuleRecs(a.recommendations, this.moduleId);
   }
-
-  calculateScore(_strengths: Finding[], _weaknesses: Finding[], _risks: Risk[]): number {
-    return 60;
-  }
+  calculateScore(_s: Finding[], _w: Finding[], _r: Risk[]): number { return this._g?.score ?? 50; }
 }

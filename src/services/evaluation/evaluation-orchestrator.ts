@@ -16,6 +16,7 @@ export interface EvaluationInput {
   selectedModules: ModuleId[];
   profileId?: string;
   customWeights?: Record<ModuleId, number>;
+  files?: Array<{ path: string; content: string }>;
 }
 
 export class EvaluationOrchestrator {
@@ -49,6 +50,8 @@ export class EvaluationOrchestrator {
           intelligence: input.intelligence,
           readme: input.readme,
           problemStatement: input.problemStatement,
+          files: input.files,
+          options: { profileId: input.profileId },
         });
         moduleResults.push(result);
       } catch (error) {

@@ -1,50 +1,54 @@
 import { BaseEvaluationModule, type ModuleInput } from "@/services/evaluation/base-module";
 import type { Finding, Risk, Recommendation, ModuleResult } from "@/types/evaluation";
+import { analyzeWithGemini, findingsToModuleFindings, recommendationsToModuleRecs } from "@/services/evaluation/gemini-analysis";
 
 export class CodeQualityModule extends BaseEvaluationModule {
-  readonly moduleId = "code_quality";
+  readonly moduleId = "code_quality" as const;
   readonly moduleName = "Code Quality";
-  readonly description = "Evaluates code structure, naming, SOLID principles, DRY, complexity";
+  readonly description = "Evaluates code structure, naming conventions, SOLID principles, DRY, complexity, and maintainability";
   readonly version = "1.0";
 
   async evaluate(input: ModuleInput): Promise<ModuleResult> {
     return this.buildResult(input);
   }
 
-  async buildStrengths(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Clean Project Structure", "Project follows organized directory structure", "medium",
-        [this.evidence("Root directory shows clear separation of concerns", "src/", "deterministic")], "structure"),
-    ];
+  private geminiCache: Awaited<ReturnType<typeof analyzeWithGemini>> | null = null;
+
+  private async getGeminiAnalysis(input: ModuleInput) {
+    if (!this.geminiCache) {
+      this.geminiCache = await analyzeWithGemini({
+        moduleName: this.moduleName,
+        moduleDescription: this.description,
+        repoContext: JSON.stringify(input.intelligence, null, 2).slice(0, 2000),
+        readme: input.readme,
+        problemStatement: input.problemStatement,
+        files: input.files,
+      });
+    }
+    return this.geminiCache;
   }
 
-  async buildWeaknesses(_input: ModuleInput): Promise<Finding[]> {
-    return [
-      this.finding("Code Duplication Risk", "Check for repeated patterns across modules", "medium",
-        [this.evidence("Review required across components", undefined, "inferred", "medium")], "duplication"),
-    ];
+  async buildStrengths(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.getGeminiAnalysis(input);
+    return findingsToModuleFindings(a.strengths, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
 
-  async buildRisks(_input: ModuleInput): Promise<Risk[]> {
-    return [
-      this.risk("Growing Complexity", "As features increase, maintainability may decrease",
-        "medium", "medium", "Establish coding standards and conduct regular refactoring"),
-    ];
+  async buildWeaknesses(input: ModuleInput): Promise<Finding[]> {
+    const a = await this.getGeminiAnalysis(input);
+    return findingsToModuleFindings(a.weaknesses, (d, f, t, c) => this.evidence(d, f, t, c), (t, d, s, e, c) => this.finding(t, d, s, e, c));
   }
 
-  async buildRecommendations(_input: ModuleInput): Promise<Recommendation[]> {
-    return [
-      this.recommendation("Add ESLint/Prettier Configuration",
-        "Consistent code formatting improves readability", "medium",
-        "Add .eslintrc and .prettierrc with consistent rules", "hours", 8),
-    ];
+  async buildRisks(input: ModuleInput): Promise<Risk[]> {
+    const a = await this.getGeminiAnalysis(input);
+    return a.risks.map((r) => this.risk(r.title, r.description, r.likelihood as "low" | "medium" | "high", r.impact as "low" | "medium" | "high", r.mitigation));
+  }
+
+  async buildRecommendations(input: ModuleInput): Promise<Recommendation[]> {
+    const a = await this.getGeminiAnalysis(input);
+    return recommendationsToModuleRecs(a.recommendations, this.moduleId);
   }
 
   calculateScore(_strengths: Finding[], _weaknesses: Finding[], _risks: Risk[]): number {
-    return 78;
-  }
-
-  protected override buildSummary(strengths: Finding[], weaknesses: Finding[], score: number): string {
-    return `Code quality assessment: ${strengths.length} positive patterns observed, ${weaknesses.length} areas identified for improvement. Score: ${score}/100.`;
+    return this.geminiCache?.score ?? 50;
   }
 }
