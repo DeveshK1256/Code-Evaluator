@@ -184,9 +184,15 @@ export async function POST(request: NextRequest) {
     }, 201);
   } catch (error) {
     // Ensure error message is always a string to prevent [object Object] on frontend
-    const safeError = error instanceof Error || error instanceof AppError
+    const safeError = error instanceof Error
       ? error
-      : new AppError("INTERNAL_ERROR", error != null ? String(error) : "An unexpected error occurred", 500);
+      : new AppError(
+          "INTERNAL_ERROR",
+          error != null && typeof error === "object" && "message" in (error as object)
+            ? String((error as { message: unknown }).message)
+            : error != null ? String(error) : "An unexpected error occurred",
+          500
+        );
     return apiError(safeError);
   }
 }

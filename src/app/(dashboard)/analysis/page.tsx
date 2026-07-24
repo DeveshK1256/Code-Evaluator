@@ -51,10 +51,11 @@ export default function AnalysisPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        const errorMsg = json?.error?.message
-          ? String(json.error.message)
-          : json?.error
-            ? String(json.error)
+        const errMsg = json?.error?.message;
+        const errorMsg = typeof errMsg === "string"
+          ? errMsg
+          : json?.error?.code
+            ? String(json.error.code)
             : "Failed to import repository";
         setGithubState({ status: "error", message: errorMsg });
         return;

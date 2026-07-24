@@ -46,11 +46,17 @@ export function apiError(error: unknown, requestId?: string): NextResponse {
     return NextResponse.json(response, { status: 500 });
   }
 
+  const message =
+    error != null && typeof error === "object" && "message" in (error as object)
+      ? String((error as { message: unknown }).message)
+      : error != null && typeof error !== "object"
+        ? String(error)
+        : "An unexpected error occurred";
   const response: ApiResponse = {
     success: false,
     error: {
       code: "INTERNAL_ERROR",
-      message: error != null ? String(error) : "An unexpected error occurred",
+      message,
     },
     meta: createMeta(requestId),
   };
