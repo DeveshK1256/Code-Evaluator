@@ -183,6 +183,10 @@ export async function POST(request: NextRequest) {
       manifestId: manifest.id,
     }, 201);
   } catch (error) {
-    return apiError(error);
+    // Ensure error message is always a string to prevent [object Object] on frontend
+    const safeError = error instanceof Error || error instanceof AppError
+      ? error
+      : new AppError("INTERNAL_ERROR", error != null ? String(error) : "An unexpected error occurred", 500);
+    return apiError(safeError);
   }
 }
