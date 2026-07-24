@@ -11,7 +11,6 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-RUN mkdir -p public
 COPY . .
 
 ENV NODE_ENV=production
@@ -29,7 +28,6 @@ RUN adduser --system --uid 1001 nextjs
 # Copy standalone output and static assets
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=build --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
