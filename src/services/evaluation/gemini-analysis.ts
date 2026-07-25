@@ -174,7 +174,7 @@ function parseContext(repoContext?: string, problemStatement?: string) {
     const parsed = repoContext ? JSON.parse(repoContext) : {};
     return {
       fileCount: (parsed.fileCount as number) ?? 0,
-      hasReadme: !!(parsed.problemContext ?? repoContext.includes("README")),
+      hasReadme: !!(parsed.problemContext ?? repoContext?.includes("README")),
       hasProblem: !!(problemStatement ?? parsed.problemContext ?? false),
       repoName: (parsed.repositoryName as string) ?? "",
       language: (parsed.repositoryLanguage as string) ?? "",
