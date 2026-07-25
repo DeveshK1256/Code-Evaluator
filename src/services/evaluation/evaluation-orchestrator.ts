@@ -2,7 +2,7 @@ import { getAllEvaluationModules } from "./registry";
 import { scoringEngine } from "./scoring-engine";
 import { recommendationEngine } from "./recommendation-engine";
 import { evidenceEngine } from "./evidence-engine";
-import { getProfile, normalizeWeights } from "@/config/evaluation-profiles";
+import { getProfile, getDefaultProfile, normalizeWeights } from "@/config/evaluation-profiles";
 import type {
   ModuleResult, EvaluationSession, EvaluationProfile,
   ModuleId, Recommendation, EvaluationStatus,
@@ -30,7 +30,10 @@ export class EvaluationOrchestrator {
     roadmap: ReturnType<typeof recommendationEngine.buildRoadmap>;
   }> {
     const foundProfile = input.profileId ? getProfile(input.profileId) : undefined;
-    const profile = foundProfile ?? { id: "custom", name: "Custom", description: "", weights: input.customWeights ?? {}, isDefault: false };
+    const defaultProfile = getDefaultProfile();
+    const profile = foundProfile ?? (input.customWeights
+      ? { id: "custom", name: "Custom", description: "", weights: input.customWeights, isDefault: false }
+      : defaultProfile);
 
     const weights = normalizeWeights(
       (input.customWeights ?? profile.weights) as Record<string, number>,
