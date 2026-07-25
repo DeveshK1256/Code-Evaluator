@@ -94,8 +94,10 @@ export default function ReportsPage() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span>{new Date(session.started_at).toLocaleDateString()}</span>
-                          <span>{session.selected_modules?.length ?? 0} modules</span>
+                          <Clock className="h-3 w-3" />
+                          <span>Started: {new Date(session.started_at).toLocaleString()}</span>
+                          {session.completed_at && <span>· Completed: {new Date(session.completed_at).toLocaleString()}</span>}
+                          <span>· {session.selected_modules?.length ?? 0} modules</span>
                         </div>
                       </div>
                     </div>

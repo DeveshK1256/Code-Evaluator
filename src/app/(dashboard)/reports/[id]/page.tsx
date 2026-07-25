@@ -153,8 +153,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              {new Date(session.started_at as string).toLocaleDateString()}
-              {(session.completed_at as string) && ` — Completed ${new Date(session.completed_at as string).toLocaleDateString()}`}
+              <Clock className="h-3 w-3 inline mr-1" />
+              Started: {new Date(session.started_at as string).toLocaleString()}
+              {(session.completed_at as string) && ` — Completed: ${new Date(session.completed_at as string).toLocaleString()}`}
             </p>
           </div>
         </div>

@@ -6,8 +6,8 @@
 import { logger } from "@/lib/logger";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
-const MAX_RETRIES = 3;
+const MODELS = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
+const MAX_RETRIES = 2;
 
 interface AIRequest {
   systemPrompt: string;
@@ -35,50 +35,48 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
     { role: "user" as const, content: request.userPrompt },
   ];
 
-  const body: Record<string, unknown> = {
-    model: DEFAULT_MODEL,
-    messages,
-    temperature: request.temperature ?? 0.3,
-    max_tokens: request.maxOutputTokens ?? 8192,
-  };
+  let lastError: Error | null = null;
 
-  // Always use JSON mode for evaluation responses
-  body.response_format = { type: "json_object" };
+  for (const model of MODELS) {
+    try {
+      const body: Record<string, unknown> = {
+        model,
+        messages,
+        temperature: request.temperature ?? 0.3,
+        max_tokens: request.maxOutputTokens ?? 8192,
+      };
+      body.response_format = { type: "json_object" };
 
-  const startTime = Date.now();
-  const response = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+      const startTime = Date.now();
+      const response = await fetch(GROQ_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(body),
+      });
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`Groq API error (${response.status}): ${errText.slice(0, 200)}`);
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        lastError = new Error(`Groq API error (${response.status}): ${errText.slice(0, 200)}`);
+        logger.warn(`Groq model ${model} failed, trying next`, { error: String(lastError).slice(0, 100) });
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        choices: Array<{ message: { content: string } }>;
+        usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+      };
+
+      const latencyMs = Date.now() - startTime;
+      const text = data.choices?.[0]?.message?.content ?? "";
+
+      return { text, usage: { promptTokens: data.usage?.prompt_tokens ?? 0, responseTokens: data.usage?.completion_tokens ?? 0, totalTokens: data.usage?.total_tokens ?? 0 }, latencyMs, model };
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      logger.warn(`Groq model ${model} failed, trying next`, { error: lastError.message.slice(0, 100) });
+    }
   }
 
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-    usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-  };
-
-  const latencyMs = Date.now() - startTime;
-  const text = data.choices?.[0]?.message?.content ?? "";
-
-  return {
-    text,
-    usage: {
-      promptTokens: data.usage?.prompt_tokens ?? 0,
-      responseTokens: data.usage?.completion_tokens ?? 0,
-      totalTokens: data.usage?.total_tokens ?? 0,
-    },
-    latencyMs,
-    model: DEFAULT_MODEL,
-  };
-}
+  throw lastError ?? new Error("All Groq models failed");
 
 export async function callAIWithRetry(request: AIRequest): Promise<AIResponse> {
   let lastError: Error | null = null;

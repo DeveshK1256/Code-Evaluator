@@ -142,7 +142,7 @@ export default function RepositoriesPage() {
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {new Date(repo.createdAt).toLocaleDateString()}
+                            {new Date(repo.createdAt).toLocaleString()}
                           </span>
                           {repo.primaryLanguage && <span>{repo.primaryLanguage}</span>}
                           {repo.fileCount !== undefined && <span>{repo.fileCount} files</span>}
