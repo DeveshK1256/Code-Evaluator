@@ -135,9 +135,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                   <p className="text-xs font-medium text-emerald-600 mb-1 flex items-center gap-1">
                     <Star className="h-3 w-3" /> Strengths ({mod.strengths.length})
                   </p>
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    {(mod.strengths as Array<{ title: string }>).slice(0, 3).map((s, i) => (
-                      <p key={i}>• {s.title}</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {(mod.strengths as Array<{ title: string; description: string }>).slice(0, 4).map((s, i) => (
+                      <p key={i}><span className="font-medium">{s.title}</span>: {s.description}</p>
                     ))}
                   </div>
                 </div>
@@ -147,9 +147,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                   <p className="text-xs font-medium text-amber-600 mb-1 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Areas to Improve ({mod.weaknesses.length})
                   </p>
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    {(mod.weaknesses as Array<{ title: string }>).slice(0, 3).map((w, i) => (
-                      <p key={i}>• {w.title}</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {(mod.weaknesses as Array<{ title: string; description: string }>).slice(0, 4).map((w, i) => (
+                      <p key={i}><span className="font-medium">{w.title}</span>: {w.description}</p>
                     ))}
                   </div>
                 </div>
