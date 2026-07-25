@@ -47,23 +47,46 @@ export async function analyzeAllModules(
   context: { repoContext: string; readme?: string; problemStatement?: string; files?: Array<{ path: string; content: string }> }
 ): Promise<Record<string, ModResult>> {
   const filesSection = context.files?.length
-    ? `\nKey source files:\n${context.files.map((f) => `--- ${f.path} ---\n${f.content.slice(0, 500)}`).join("\n\n")}`
+    ? `\nSOURCE FILES:\n${context.files.slice(0, 15).map((f) => `=== ${f.path} ===\n${f.content.slice(0, 800)}`).join("\n\n")}`
     : "";
 
-  const systemPrompt = `You are an expert software evaluator. Analyze this project across ALL these criteria in ONE response:
+  const criteriaDescs = modules.map((m) =>
+    `"${m.id}": Evaluate "${m.name}" — ${m.description}. Provide specific strengths/weaknesses with file references.`
+  ).join("\n");
 
-${modules.map((m) => `- ${m.id}: ${m.name} — ${m.description}`).join("\n")}
+  const systemPrompt = `You are an expert code analyst evaluating a software project. Your task is to provide a DEEP, SPECIFIC analysis for each criteria.
 
-For each criteria, provide: strengths (specific, with evidence), weaknesses, risks (likelihood & impact), recommendations (with effort), a score (0-100), and a summary. Be specific — reference actual code patterns, file names, or project characteristics.`;
+For EVERY criteria you MUST:
+1. Read the source files and problem context CAREFULLY
+2. Find SPECIFIC evidence in the code (file names, patterns, code snippets)
+3. Give REAL strengths and weaknesses based on ACTUAL code you see
+4. Assign a meaningful score (0-100) based on the evidence
+5. Write a 2-3 sentence summary explaining the score
 
-  const userPrompt = `Evaluate this project across ${modules.length} criteria.
+CRITICAL for Problem Statement Alignment:
+- Read the problem statement word by word
+- Check if the source code ACTUALLY implements what the problem asks
+- List specific files that show alignment or gaps
+- If the problem mentions features A, B, C but code only has A and B, note that C is missing
+- Score based on HOW MUCH of the problem is actually addressed in the code
 
-Repository:${context.repoContext.slice(0, 800)}
-${context.readme ? `README:\n${context.readme.slice(0, 800)}` : ""}
-${context.problemStatement ? `Problem:\n${context.problemStatement.slice(0, 800)}` : ""}
+${criteriaDescs}
+
+Return ONLY valid JSON. No markdown, no explanation, no code blocks.`;
+
+  const userPrompt = `Evaluate this project across ALL ${modules.length} criteria below.
+
+REPOSITORY DATA:
+${context.repoContext.slice(0, 1200)}
+${context.readme ? `\nREADME CONTENT:\n${context.readme.slice(0, 1500)}` : ""}
+${context.problemStatement ? `\nPROBLEM STATEMENT:\n${context.problemStatement.slice(0, 1500)}` : ""}
 ${filesSection}
 
-Return valid JSON with one key per criteria containing all fields.`;
+For Problem Alignment: Compare the problem statement directly against the source code. List what features asked for vs implemented. Score based on how much of the problem is addressed.
+
+Return JSON with keys: ${modules.map((m) => `"${m.id}"`).join(", ")}.
+Each key must contain: strengths[], weaknesses[], risks[], recommendations[], score(number 0-100), summary(string).
+ONLY valid JSON. No backticks, no markdown, no other text.`;
 
   const response = await callAIWithRetry({
     systemPrompt, userPrompt,
