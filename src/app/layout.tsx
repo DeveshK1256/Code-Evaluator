@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   },
   description: "Deep semantic analysis of software projects powered by Gemini AI.",
   keywords: ["code review", "AI evaluation", "software analysis", "Gemini"],
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

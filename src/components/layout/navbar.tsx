@@ -32,7 +32,7 @@ export function Navbar() {
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle sidebar">
             <Menu className="h-5 w-5" />
           </Button>
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
             <Code className="h-5 w-5 text-primary" />
             <span className="hidden sm:inline">Code Evaluator</span>
           </Link>
