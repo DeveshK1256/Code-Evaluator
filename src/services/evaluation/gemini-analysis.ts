@@ -70,33 +70,27 @@ Return valid JSON with one key per criteria containing all fields.`;
   for (const m of modules) { props[m.id] = MOD_SCHEMA; req.push(m.id); }
   const schema: Record<string, unknown> = { type: "object", properties: props, required: req };
 
-  try {
-    const response = await callGeminiWithRetry({
-      systemPrompt, userPrompt,
-      outputSchema: schema, temperature: 0.3, maxOutputTokens: 8192,
-    });
-    const parsed = JSON.parse(response.text) as Record<string, unknown>;
-    const results: Record<string, ModResult> = {};
-    for (const m of modules) {
-      const d = parsed[m.id] as Record<string, unknown> | undefined;
-      if (d && typeof d.score === "number") {
-        results[m.id] = {
-          strengths: (d.strengths ?? []) as ModResult["strengths"],
-          weaknesses: (d.weaknesses ?? []) as ModResult["weaknesses"],
-          risks: (d.risks ?? []) as ModResult["risks"],
-          recommendations: (d.recommendations ?? []) as ModResult["recommendations"],
-          score: d.score as number, summary: (d.summary as string) ?? "",
-        };
-      } else {
-        results[m.id] = fallback(m.name);
-      }
+  const response = await callGeminiWithRetry({
+    systemPrompt, userPrompt,
+    outputSchema: schema, temperature: 0.3, maxOutputTokens: 8192,
+  });
+  const parsed = JSON.parse(response.text) as Record<string, unknown>;
+  const results: Record<string, ModResult> = {};
+  for (const m of modules) {
+    const d = parsed[m.id] as Record<string, unknown> | undefined;
+    if (d && typeof d.score === "number") {
+      results[m.id] = {
+        strengths: (d.strengths ?? []) as ModResult["strengths"],
+        weaknesses: (d.weaknesses ?? []) as ModResult["weaknesses"],
+        risks: (d.risks ?? []) as ModResult["risks"],
+        recommendations: (d.recommendations ?? []) as ModResult["recommendations"],
+        score: d.score as number, summary: (d.summary as string) ?? "",
+      };
+    } else {
+      throw new Error(`Invalid response for module ${m.id}`);
     }
-    return results;
-  } catch {
-    const results: Record<string, ModResult> = {};
-    for (const m of modules) results[m.id] = fallback(m.name);
-    return results;
   }
+  return results;
 }
 
 function fallback(name: string): ModResult {
