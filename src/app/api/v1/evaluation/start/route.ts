@@ -93,18 +93,18 @@ export async function POST(request: NextRequest) {
       for (const target of configTargets) {
         try {
           const content = fileDiscoveryService.readFileContent(workspacePath, target);
-          if (content) keyFiles.push({ path: target, content: content.slice(0, 3000) });
+          if (content) keyFiles.push({ path: target, content: content.slice(0, 5000) });
         } catch { /* skip */ }
       }
-      // Read a few source files
+      // Read source files
       let srcFilesRead = 0;
       for (const f of fileList.slice(0, 30)) {
-        if (keyFiles.length >= 20 || srcFilesRead >= 15) break;
+        if (keyFiles.length >= 25 || srcFilesRead >= 20) break;
         if (configTargets.includes(f)) continue;
         try {
           const content = fileDiscoveryService.readFileContent(workspacePath, f);
-          if (content && content.length < 10000) {
-            keyFiles.push({ path: f, content: content.slice(0, 3000) });
+          if (content && content.length < 15000) {
+            keyFiles.push({ path: f, content: content.slice(0, 5000) });
             srcFilesRead++;
           }
         } catch { /* skip */ }

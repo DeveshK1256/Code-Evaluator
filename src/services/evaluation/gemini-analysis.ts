@@ -77,16 +77,30 @@ Return ONLY valid JSON. No markdown, no explanation, no code blocks.`;
   const userPrompt = `Evaluate this project across ALL ${modules.length} criteria below.
 
 REPOSITORY DATA:
-${context.repoContext.slice(0, 1200)}
-${context.readme ? `\nREADME CONTENT:\n${context.readme.slice(0, 1500)}` : ""}
-${context.problemStatement ? `\nPROBLEM STATEMENT:\n${context.problemStatement.slice(0, 1500)}` : ""}
+${context.repoContext.slice(0, 1500)}
+${context.readme ? `\nREADME CONTENT:\n${context.readme.slice(0, 2000)}` : ""}
+${context.problemStatement ? `\nPROBLEM STATEMENT:\n${context.problemStatement.slice(0, 2000)}` : ""}
 ${filesSection}
 
-For Problem Alignment: Compare the problem statement directly against the source code. List what features asked for vs implemented. Score based on how much of the problem is addressed.
+For Problem Alignment: Directly compare the problem statement against the actual source code. List SPECIFIC features requested vs what's implemented. Point to specific files.
 
-Return JSON with keys: ${modules.map((m) => `"${m.id}"`).join(", ")}.
-Each key must contain: strengths[], weaknesses[], risks[], recommendations[], score(number 0-100), summary(string).
-ONLY valid JSON. No backticks, no markdown, no other text.`;
+IMPORTANT RULES:
+- Each strength and weakness MUST have a real title and description (minimum 10 chars each)
+- Generate at least 2 strengths and 2 weaknesses per criterion based on actual code
+- Evidence should reference specific files
+- Score 0-100 based on real analysis
+
+Return EXACT JSON format:
+{
+  "code_quality": { "strengths": [{"title":"Real Strength Title","description":"Specific description with evidence","severity":"medium","category":"structure","evidence":["file.js"]}], "weaknesses": [same structure], "risks": [...], "recommendations": [...], "score": 75, "summary": "2-3 sentence summary" },
+  "security": { ... same structure ... },
+  "efficiency": { ... },
+  "testing": { ... },
+  "accessibility": { ... },
+  "google_services": { ... },
+  "problem_alignment": { ... }
+}
+ONLY valid JSON. Every title and description MUST be non-empty strings.`;
 
   const response = await callAIWithRetry({
     systemPrompt, userPrompt,
