@@ -173,24 +173,6 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           </Button>
         </div>
       </div>
-          </Link>
-        </div>
-        {/* Download Buttons */}
-        <div className="flex gap-2 mt-2 sm:mt-0">
-          <Button variant="outline" size="sm" onClick={downloadJSON} title="Download as JSON">
-            <FileJson className="h-4 w-4 mr-1" /> JSON
-          </Button>
-          <Button variant="outline" size="sm" onClick={downloadMarkdown} title="Download as Markdown">
-            <FileText className="h-4 w-4 mr-1" /> MD
-          </Button>
-          <Button variant="outline" size="sm" onClick={downloadCSV} title="Download as CSV">
-            <FileSpreadsheet className="h-4 w-4 mr-1" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print / Save as PDF">
-            <Download className="h-4 w-4 mr-1" /> PDF
-          </Button>
-        </div>
-      </div>
 
       {/* Score Card */}
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
