@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ export default function RepositoryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [repo, setRepo] = useState<Repository | null>(null);
   const [technologies, setTechnologies] = useState<TechnologyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -134,7 +136,12 @@ export default function RepositoryDetailPage({
         throw new Error(json.error?.message ?? "Failed to start analysis");
       }
       setAnalysisOpen(false);
-      if (repo) setRepo({ ...repo, status: "analysis_running", progress: 10, statusMessage: "Analysis queued..." });
+      const sessionId = json.data?.sessionId;
+      if (sessionId) {
+        router.push(`/reports/${sessionId}`);
+      } else {
+        if (repo) setRepo({ ...repo, status: "analysis_running", progress: 10, statusMessage: "Analysis started..." });
+      }
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : "Failed to start analysis");
     } finally {
@@ -283,7 +290,7 @@ export default function RepositoryDetailPage({
               Start Analysis
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Start Analysis</DialogTitle>
               <DialogDescription>
