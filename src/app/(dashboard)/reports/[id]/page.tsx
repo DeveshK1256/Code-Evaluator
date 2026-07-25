@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, CheckCircle2, AlertCircle, Clock, BarChart3,
   Target, Shield, Zap, FileText, Star, Lightbulb, AlertTriangle,
+  Download, FileJson, FileSpreadsheet,
 } from "lucide-react";
 
 interface ModuleResult {
@@ -49,6 +50,71 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     fetchReport();
   }, [id]);
 
+  // ─── Download Handlers ──────────────────────────────────
+  const downloadJSON = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `report-${id.slice(0, 8)}.json`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadMarkdown = () => {
+    if (!data) return;
+    const { session, modules, recommendations } = data;
+    const lines: string[] = [];
+    lines.push(`# Evaluation Report\n`);
+    lines.push(`**Date:** ${new Date(session.started_at as string).toLocaleDateString()}`);
+    lines.push(`**Status:** ${session.status as string}`);
+    lines.push(`**Overall Score:** ${session.overall_score as number}/100`);
+    lines.push(`**Grade:** ${session.overall_grade as string}\n`);
+    lines.push(`---\n`);
+    for (const mod of modules) {
+      lines.push(`## ${mod.module_name}\n`);
+      lines.push(`**Score:** ${mod.score} (${mod.grade})\n`);
+      lines.push(`**Summary:** ${mod.summary}\n`);
+      if (mod.strengths.length > 0) {
+        lines.push(`### Strengths\n`);
+        for (const s of mod.strengths as Array<{ title: string; description: string }>) {
+          lines.push(`- **${s.title}**: ${s.description}`);
+        }
+        lines.push(``);
+      }
+      if (mod.weaknesses.length > 0) {
+        lines.push(`### Areas to Improve\n`);
+        for (const w of mod.weaknesses as Array<{ title: string; description: string }>) {
+          lines.push(`- **${w.title}**: ${w.description}`);
+        }
+        lines.push(``);
+      }
+    }
+    if (recommendations.length > 0) {
+      lines.push(`---\n## Recommendations\n`);
+      for (const rec of recommendations as Array<{ title: string; severity: string; suggestedFix?: string; estimated_effort?: string }>) {
+        lines.push(`- **${rec.title}** (${rec.severity})`);
+        if (rec.suggestedFix) lines.push(`  - Fix: ${rec.suggestedFix}`);
+        lines.push(``);
+      }
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `report-${id.slice(0, 8)}.md`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadCSV = () => {
+    if (!data) return;
+    const rows = [["Module", "Score", "Grade", "Summary"]];
+    for (const mod of data.modules) {
+      rows.push([mod.module_name, String(mod.score), mod.grade, mod.summary.replace(/"/g, "'")]);
+    }
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `report-${id.slice(0, 8)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) return <LoadingOverlay label="Loading report..." />;
   if (error) return <ErrorState title="Error" message={error} />;
   if (!data) return <ErrorState title="Not Found" message="Report not found" />;
@@ -72,24 +138,58 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
       ]} />
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Evaluation Report</h1>
-            <Badge variant={session.status === "complete" ? "success" : "secondary"}>
-              {session.status as string}
-            </Badge>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Link href="/reports">
+            <Button variant="ghost" size="icon" className="-ml-2 mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Evaluation Report</h1>
+              <Badge variant={session.status === "complete" ? "success" : "secondary"}>
+                {session.status as string}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {new Date(session.started_at as string).toLocaleDateString()}
+              {(session.completed_at as string) && ` — Completed ${new Date(session.completed_at as string).toLocaleDateString()}`}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {new Date(session.started_at as string).toLocaleDateString()}
-            {(session.completed_at as string) && ` — Completed ${new Date(session.completed_at as string).toLocaleDateString()}`}
-          </p>
         </div>
-        <Link href="/reports">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={downloadJSON} title="Download as JSON">
+            <FileJson className="h-4 w-4 mr-1" /> JSON
           </Button>
-        </Link>
+          <Button variant="outline" size="sm" onClick={downloadMarkdown} title="Download as Markdown">
+            <FileText className="h-4 w-4 mr-1" /> MD
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadCSV} title="Download as CSV">
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print / Save as PDF">
+            <Download className="h-4 w-4 mr-1" /> Print
+          </Button>
+        </div>
+      </div>
+          </Link>
+        </div>
+        {/* Download Buttons */}
+        <div className="flex gap-2 mt-2 sm:mt-0">
+          <Button variant="outline" size="sm" onClick={downloadJSON} title="Download as JSON">
+            <FileJson className="h-4 w-4 mr-1" /> JSON
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadMarkdown} title="Download as Markdown">
+            <FileText className="h-4 w-4 mr-1" /> MD
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadCSV} title="Download as CSV">
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print / Save as PDF">
+            <Download className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </div>
       </div>
 
       {/* Score Card */}
