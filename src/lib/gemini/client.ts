@@ -39,13 +39,11 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
     model: DEFAULT_MODEL,
     messages,
     temperature: request.temperature ?? 0.3,
-    max_tokens: request.maxOutputTokens ?? 4096,
+    max_tokens: request.maxOutputTokens ?? 8192,
   };
 
-  // For structured output, use JSON mode
-  if (request.outputSchema) {
-    body.response_format = { type: "json_object" };
-  }
+  // Always use JSON mode for evaluation responses
+  body.response_format = { type: "json_object" };
 
   const startTime = Date.now();
   const response = await fetch(GROQ_API_URL, {

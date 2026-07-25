@@ -90,7 +90,7 @@ ONLY valid JSON. No backticks, no markdown, no other text.`;
 
   const response = await callAIWithRetry({
     systemPrompt, userPrompt,
-    temperature: 0.3, maxOutputTokens: 4096,
+    temperature: 0.3, maxOutputTokens: 8192,
   });
   const text = response.text;
 
