@@ -130,13 +130,19 @@ ONLY valid JSON. Every title and description MUST be non-empty strings.`;
       if (altKey) d = parsed[altKey] as Record<string, unknown>;
     }
     if (d && typeof d.score === "number") {
+      // Filter out empty entries
+      const filterEmpty = (arr: Array<Record<string, unknown>>) => arr.filter((x) => x.title && String(x.title).trim().length > 0);
       results[m.id] = {
-        strengths: (d.strengths ?? []) as ModResult["strengths"],
-        weaknesses: (d.weaknesses ?? []) as ModResult["weaknesses"],
-        risks: (d.risks ?? []) as ModResult["risks"],
-        recommendations: (d.recommendations ?? []) as ModResult["recommendations"],
+        strengths: filterEmpty((d.strengths ?? []) as Array<Record<string, unknown>>) as ModResult["strengths"],
+        weaknesses: filterEmpty((d.weaknesses ?? []) as Array<Record<string, unknown>>) as ModResult["weaknesses"],
+        risks: filterEmpty((d.risks ?? []) as Array<Record<string, unknown>>) as ModResult["risks"],
+        recommendations: filterEmpty((d.recommendations ?? []) as Array<Record<string, unknown>>) as ModResult["recommendations"],
         score: d.score as number, summary: (d.summary as string) ?? "",
       };
+      // If all AI results were empty, don't use them — let local scoring fill in
+      if (results[m.id]!.strengths.length === 0 && results[m.id]!.weaknesses.length === 0) {
+        delete results[m.id];
+      }
     }
     // If module not in AI response, it stays undefined → getAnalysisForModule uses localScore
   }
