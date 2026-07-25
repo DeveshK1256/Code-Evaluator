@@ -227,6 +227,33 @@ export default function EvaluationPage() {
         </CardContent>
       </Card>
 
+      {/* Grade Scale */}
+      <Card className="animate-fade-in [animation-duration:0.5s]">
+        <CardHeader>
+          <CardTitle className="text-lg">Grade Scale</CardTitle>
+          <CardDescription>Understanding your evaluation scores</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-5">
+            {[
+              { grade: "A", range: "90-100", label: "Excellent", color: "text-emerald-500", desc: "Outstanding code quality, security, and alignment" },
+              { grade: "B", range: "80-89", label: "Good", color: "text-blue-500", desc: "Solid implementation with minor improvements" },
+              { grade: "C", range: "70-79", label: "Average", color: "text-amber-500", desc: "Functional but several areas need attention" },
+              { grade: "D", range: "60-69", label: "Below Avg", color: "text-orange-500", desc: "Significant gaps in quality or completeness" },
+              { grade: "F", range: "0-59", label: "Poor", color: "text-red-500", desc: "Critical issues found across multiple criteria" },
+            ].map((g) => (
+              <div key={g.grade} className="rounded-lg border p-3 text-center animate-fade-in"
+                style={{ animationDelay: `${0.1 * ["A","B","C","D","F"].indexOf(g.grade)}s` }}>
+                <div className={`text-3xl font-bold ${g.color}`}>{g.grade}</div>
+                <div className="text-xs text-muted-foreground mt-1">{g.range}</div>
+                <div className="text-xs font-medium mt-1">{g.label}</div>
+                <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{g.desc}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Evaluation Profile */}
       <Card>
         <CardHeader>
