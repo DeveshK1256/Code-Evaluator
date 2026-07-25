@@ -1,4 +1,4 @@
-import { callGeminiWithRetry } from "@/lib/gemini/client";
+import { callAIWithRetry } from "@/lib/gemini/client";
 import { aiCacheService } from "@/services/ai-cache.service";
 import { logger } from "@/lib/logger";
 import type { AgentResult } from "@/types/intelligence";
@@ -75,7 +75,7 @@ export abstract class BaseAgent {
     }
 
     try {
-      const response = await callGeminiWithRetry({
+      const response = await callAIWithRetry({
         systemPrompt,
         userPrompt,
         outputSchema: this.getOutputSchema(),
