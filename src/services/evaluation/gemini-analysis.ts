@@ -47,7 +47,7 @@ export async function analyzeAllModules(
   context: { repoContext: string; readme?: string; problemStatement?: string; files?: Array<{ path: string; content: string }> }
 ): Promise<Record<string, ModResult>> {
   const filesSection = context.files?.length
-    ? `\nKey source files:\n${context.files.map((f) => `--- ${f.path} ---\n${f.content.slice(0, 1200)}`).join("\n\n")}`
+    ? `\nKey source files:\n${context.files.map((f) => `--- ${f.path} ---\n${f.content.slice(0, 500)}`).join("\n\n")}`
     : "";
 
   const systemPrompt = `You are an expert software evaluator. Analyze this project across ALL these criteria in ONE response:
@@ -58,9 +58,9 @@ For each criteria, provide: strengths (specific, with evidence), weaknesses, ris
 
   const userPrompt = `Evaluate this project across ${modules.length} criteria.
 
-Repository:${context.repoContext.slice(0, 1500)}
-${context.readme ? `README:\n${context.readme.slice(0, 2000)}` : ""}
-${context.problemStatement ? `Problem:\n${context.problemStatement.slice(0, 1500)}` : ""}
+Repository:${context.repoContext.slice(0, 800)}
+${context.readme ? `README:\n${context.readme.slice(0, 800)}` : ""}
+${context.problemStatement ? `Problem:\n${context.problemStatement.slice(0, 800)}` : ""}
 ${filesSection}
 
 Return valid JSON with one key per criteria containing all fields.`;
