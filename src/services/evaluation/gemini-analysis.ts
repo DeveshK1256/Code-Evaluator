@@ -1,4 +1,4 @@
-import { callGeminiWithRetry } from "@/lib/gemini/client";
+import { callAIWithRetry } from "@/lib/gemini/client";
 import type { Finding, Risk, Recommendation, EvidenceItem } from "@/types/evaluation";
 
 export interface ModResult {
@@ -70,9 +70,9 @@ Return valid JSON with one key per criteria containing all fields.`;
   for (const m of modules) { props[m.id] = MOD_SCHEMA; req.push(m.id); }
   const schema: Record<string, unknown> = { type: "object", properties: props, required: req };
 
-  const response = await callGeminiWithRetry({
+  const response = await callAIWithRetry({
     systemPrompt, userPrompt,
-    outputSchema: schema, temperature: 0.3, maxOutputTokens: 8192,
+    outputSchema: schema, temperature: 0.3, maxOutputTokens: 4096,
   });
   const parsed = JSON.parse(response.text) as Record<string, unknown>;
   const results: Record<string, ModResult> = {};

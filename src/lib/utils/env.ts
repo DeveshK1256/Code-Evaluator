@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
-  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
+  GEMINI_API_KEY: z.string().optional(),
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
   INNGEST_APP_ID: z.string().default("code-evaluator"),
