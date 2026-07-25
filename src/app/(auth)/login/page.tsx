@@ -13,15 +13,26 @@ export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  const validate = (email: string, password: string): boolean => {
+    const errors: { email?: string; password?: string } = {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Valid email is required";
+    if (!password || password.length < 6) errors.password = "Password must be at least 6 characters";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = (formData.get("email") as string).trim();
+    const password = formData.get("password") as string;
+
+    if (!validate(email, password)) return;
+
     setIsLoading(true);
     setError(null);
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
 
     try {
       const res = await fetch("/api/v1/auth/login", {
@@ -64,7 +75,14 @@ export default function LoginPage() {
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="you@example.com" required disabled={isLoading} />
+              <Input
+                id="email" name="email" type="email"
+                placeholder="you@example.com" required disabled={isLoading}
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                autoComplete="email"
+              />
+              {fieldErrors.email && <p id="email-error" className="text-xs text-destructive" role="alert">{fieldErrors.email}</p>}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -73,7 +91,14 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <Input id="password" name="password" type="password" placeholder="••••••••" required disabled={isLoading} />
+              <Input
+                id="password" name="password" type="password"
+                placeholder="••••••••" required disabled={isLoading}
+                aria-invalid={!!fieldErrors.password}
+                aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                autoComplete="current-password"
+              />
+              {fieldErrors.password && <p id="password-error" className="text-xs text-destructive" role="alert">{fieldErrors.password}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

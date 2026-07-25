@@ -101,6 +101,32 @@
     @apply outline-none ring-0;
   }
 
+  /* Consistent typography scale */
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-medium; }
+  p { @apply leading-7; }
+  small { @apply text-sm font-medium leading-none; }
+
+  /* Screen reader only utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Skip to main content link */
+  .skip-link {
+    @apply absolute -top-10 left-0 z-50 bg-primary px-4 py-2 text-sm text-primary-foreground transition-all focus:top-0;
+  }
+
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
