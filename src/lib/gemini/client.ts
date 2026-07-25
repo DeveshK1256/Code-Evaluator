@@ -77,6 +77,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
   }
 
   throw lastError ?? new Error("All Groq models failed");
+}
 
 export async function callAIWithRetry(request: AIRequest): Promise<AIResponse> {
   let lastError: Error | null = null;
