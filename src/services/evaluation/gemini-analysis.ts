@@ -141,7 +141,7 @@ ONLY valid JSON. Every title and description MUST be non-empty strings.`;
       };
       // If AI returned score but empty content, keep the score, fill content from local
       if (results[m.id]!.strengths.length === 0 && results[m.id]!.weaknesses.length === 0) {
-        const local = localScore(m.id, parseContext(), null, []);
+        const local = localScore(m.id, parseContext(), undefined, []);
         results[m.id]!.strengths = local.strengths;
         results[m.id]!.weaknesses = local.weaknesses;
         results[m.id]!.risks = local.risks;
