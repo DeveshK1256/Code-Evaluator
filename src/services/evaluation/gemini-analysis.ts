@@ -139,9 +139,14 @@ ONLY valid JSON. Every title and description MUST be non-empty strings.`;
         recommendations: filterEmpty((d.recommendations ?? []) as Array<Record<string, unknown>>) as ModResult["recommendations"],
         score: d.score as number, summary: (d.summary as string) ?? "",
       };
-      // If all AI results were empty, don't use them — let local scoring fill in
+      // If AI returned score but empty content, keep the score, fill content from local
       if (results[m.id]!.strengths.length === 0 && results[m.id]!.weaknesses.length === 0) {
-        delete results[m.id];
+        const local = localScore(m.id, parseContext(), null, []);
+        results[m.id]!.strengths = local.strengths;
+        results[m.id]!.weaknesses = local.weaknesses;
+        results[m.id]!.risks = local.risks;
+        results[m.id]!.recommendations = local.recommendations;
+        if (!results[m.id]!.summary) results[m.id]!.summary = local.summary;
       }
     }
     // If module not in AI response, it stays undefined → getAnalysisForModule uses localScore
@@ -164,9 +169,9 @@ function fallback(name: string): ModResult {
 
 const cache = { results: null as Record<string, ModResult> | null, key: "", context: "" as string };
 
-function parseContext(repoContext: string, problemStatement?: string) {
+function parseContext(repoContext?: string, problemStatement?: string) {
   try {
-    const parsed = JSON.parse(repoContext);
+    const parsed = repoContext ? JSON.parse(repoContext) : {};
     return {
       fileCount: (parsed.fileCount as number) ?? 0,
       hasReadme: !!(parsed.problemContext ?? repoContext.includes("README")),
