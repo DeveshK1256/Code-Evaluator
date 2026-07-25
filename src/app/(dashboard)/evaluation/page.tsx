@@ -302,12 +302,12 @@ export default function EvaluationPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {modules.map((mod) => {
+            {modules.map((mod, i) => {
               const isSelected = selectedModules.has(mod.id);
               return (
                 <label
                   key={mod.id}
-                  className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                  className={`animate-fade-in [animation-delay:${i * 0.05}s] flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
                     isSelected ? "border-primary bg-primary/5" : "hover:bg-accent"
                   }`}
                 >

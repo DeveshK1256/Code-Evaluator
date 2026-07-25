@@ -88,28 +88,35 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="animate-fade-in [animation-duration:0.3s]">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold">{total}</div>
             <p className="text-xs text-muted-foreground mt-1">Total Repositories</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="animate-fade-in [animation-duration:0.4s]">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold text-emerald-500">{completeRepos.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Evaluations Complete</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="animate-fade-in [animation-duration:0.5s]">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold text-amber-500">{readyRepos.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Ready for Analysis</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="animate-fade-in [animation-duration:0.6s]">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold">{latestSession?.overall_score ?? "—"}</div>
-            <p className="text-xs text-muted-foreground mt-1">Latest Score</p>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              {latestSession?.overall_grade && (
+                <Badge variant={latestSession.overall_grade.startsWith("A") ? "success" : latestSession.overall_grade.startsWith("F") ? "destructive" : "secondary"} className="text-xs">
+                  {latestSession.overall_grade}
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">Latest Score</span>
+            </div>
           </CardContent>
         </Card>
       </div>
