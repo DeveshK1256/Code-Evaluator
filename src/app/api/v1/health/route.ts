@@ -26,7 +26,7 @@ export async function GET() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
         body: JSON.stringify({
-          model: "llama3-70b-8192",
+          model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: "Analyze a project. Return JSON with test_key: { score: 85, summary: 'test' }" }],
           response_format: { type: "json_object" },
           max_tokens: 500,
