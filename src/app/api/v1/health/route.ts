@@ -10,6 +10,7 @@ export async function GET() {
   };
 
   let groqTest = "not tested";
+  let groqEvalTest = "not tested";
   if (checks.hasGroqKey) {
     try {
       const res = await fetch("https://api.groq.com/openai/v1/models", {
@@ -19,7 +20,24 @@ export async function GET() {
     } catch (e) {
       groqTest = `Error: ${e instanceof Error ? e.message : String(e)}`;
     }
+    // Test actual evaluation call
+    try {
+      const evalRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: "llama3-70b-8192",
+          messages: [{ role: "user", content: "Analyze a project. Return JSON with test_key: { score: 85, summary: 'test' }" }],
+          response_format: { type: "json_object" },
+          max_tokens: 500,
+        }),
+      });
+      const evalText = await evalRes.text();
+      groqEvalTest = evalRes.ok ? `OK: ${evalText.slice(0, 200)}` : `Failed (${evalRes.status}): ${evalText.slice(0, 200)}`;
+    } catch (e) {
+      groqEvalTest = `Error: ${e instanceof Error ? e.message : String(e)}`;
+    }
   }
 
-  return NextResponse.json({ status: "ok", checks, groqTest });
+  return NextResponse.json({ status: "ok", checks, groqTest, groqEvalTest });
 }
