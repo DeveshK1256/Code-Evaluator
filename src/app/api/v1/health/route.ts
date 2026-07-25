@@ -1,34 +1,25 @@
 import { NextResponse } from "next/server";
-import { APP_VERSION } from "@/constants";
-
-export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const startTime = Date.now();
-
-  const health = {
-    status: "healthy",
-    version: APP_VERSION,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    services: {
-      api: { status: "healthy", latency: `${Date.now() - startTime}ms` },
-      auth: { status: process.env.NEXT_PUBLIC_SUPABASE_URL ? "configured" : "not_configured" },
-      database: { status: process.env.NEXT_PUBLIC_SUPABASE_URL ? "configured" : "not_configured" },
-      gemini: { status: process.env.GEMINI_API_KEY ? "configured" : "not_configured" },
-      inngest: { status: process.env.INNGEST_EVENT_KEY ? "configured" : "not_configured" },
-    },
-    memory: {
-      usage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
-      total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
-    },
-    environment: process.env.NODE_ENV,
+  const checks = {
+    hasGroqKey: !!process.env.GROQ_API_KEY,
+    groqKeyPrefix: process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.slice(0, 8) + "..." : "not set",
+    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
   };
 
-  return NextResponse.json(health, {
-    status: 200,
-    headers: {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-    },
-  });
+  let groqTest = "not tested";
+  if (checks.hasGroqKey) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      });
+      groqTest = res.ok ? "OK" : `Failed (${res.status}): ${(await res.text()).slice(0, 100)}`;
+    } catch (e) {
+      groqTest = `Error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+
+  return NextResponse.json({ status: "ok", checks, groqTest });
 }
