@@ -65,19 +65,33 @@ ${filesSection}
 
 Return valid JSON with one key per criteria containing all fields.`;
 
-  const props: Record<string, unknown> = {};
-  const req: string[] = [];
-  for (const m of modules) { props[m.id] = MOD_SCHEMA; req.push(m.id); }
-  const schema: Record<string, unknown> = { type: "object", properties: props, required: req };
-
   const response = await callAIWithRetry({
     systemPrompt, userPrompt,
-    outputSchema: schema, temperature: 0.3, maxOutputTokens: 4096,
+    temperature: 0.3, maxOutputTokens: 4096,
   });
-  const parsed = JSON.parse(response.text) as Record<string, unknown>;
+  const text = response.text;
+
+  // Try to extract JSON from the response (handle markdown-wrapped JSON)
+  let jsonStr = text;
+  const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (jsonMatch) jsonStr = jsonMatch[1]!;
+
+  let parsed: Record<string, unknown>;
+  try { parsed = JSON.parse(jsonStr); } catch {
+    // Try finding any JSON object in the response
+    const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (objMatch) { try { parsed = JSON.parse(objMatch[0]!); } catch { parsed = {}; } }
+    else { parsed = {}; }
+  }
+
   const results: Record<string, ModResult> = {};
   for (const m of modules) {
-    const d = parsed[m.id] as Record<string, unknown> | undefined;
+    // Try exact match, then underscore/spaces variations, then case-insensitive
+    let d: Record<string, unknown> | undefined = parsed[m.id] as Record<string, unknown> | undefined;
+    if (!d) {
+      const altKey = Object.keys(parsed).find((k) => k.replace(/[\s_-]/g, "") === m.id.replace(/[\s_-]/g, ""));
+      if (altKey) d = parsed[altKey] as Record<string, unknown>;
+    }
     if (d && typeof d.score === "number") {
       results[m.id] = {
         strengths: (d.strengths ?? []) as ModResult["strengths"],
@@ -86,9 +100,8 @@ Return valid JSON with one key per criteria containing all fields.`;
         recommendations: (d.recommendations ?? []) as ModResult["recommendations"],
         score: d.score as number, summary: (d.summary as string) ?? "",
       };
-    } else {
-      throw new Error(`Invalid response for module ${m.id}`);
     }
+    // If module not in AI response, it stays undefined → getAnalysisForModule uses localScore
   }
   return results;
 }
@@ -250,19 +263,19 @@ export async function getAnalysisForModule(
   const key = allModules.map((m) => m.id).sort().join(",");
   const ctx = parseContext(context.repoContext, context.problemStatement);
   if (!cache.results || cache.key !== key || cache.context !== context.repoContext.slice(0, 100)) {
+    // Try AI first, then fill missing modules with local scoring
     const aiResults = await analyzeAllModules(allModules, context).catch(() => null);
-    if (aiResults) {
-      cache.results = aiResults;
-      cache.key = key;
-      cache.context = context.repoContext.slice(0, 100);
-    } else {
-      // Use local scoring as fallback
-      const local: Record<string, ModResult> = {};
-      for (const m of allModules) local[m.id] = localScore(m.id, ctx, context.problemStatement, context.files);
-      cache.results = local;
-      cache.key = key;
-      cache.context = context.repoContext.slice(0, 100);
+    const merged: Record<string, ModResult> = {};
+    for (const m of allModules) {
+      if (aiResults?.[m.id]) {
+        merged[m.id] = aiResults[m.id]!;
+      } else {
+        merged[m.id] = localScore(m.id, ctx, context.problemStatement, context.files);
+      }
     }
+    cache.results = merged;
+    cache.key = key;
+    cache.context = context.repoContext.slice(0, 100);
   }
   return cache.results[moduleId] ?? localScore(moduleId, ctx, context.problemStatement, context.files);
 }
