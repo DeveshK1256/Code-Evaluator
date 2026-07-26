@@ -47,7 +47,7 @@ export async function analyzeAllModules(
   context: { repoContext: string; readme?: string; problemStatement?: string; files?: Array<{ path: string; content: string }> }
 ): Promise<Record<string, ModResult>> {
   const filesSection = context.files?.length
-    ? `\nSOURCE FILES:\n${context.files.slice(0, 8).map((f) => `=== ${f.path} ===\n${f.content.slice(0, 400)}`).join("\n\n")}`
+    ? `\nFILES:\n${context.files.slice(0, 5).map((f) => `- ${f.path}: ${f.content.slice(0, 200)}`).join("\n")}`
     : "";
 
   const criteriaDescs = modules.map((m) =>
@@ -77,9 +77,9 @@ Return ONLY valid JSON. No markdown, no explanation, no code blocks.`;
   const userPrompt = `Evaluate this project across ALL ${modules.length} criteria below.
 
 REPOSITORY DATA:
-${context.repoContext.slice(0, 1500)}
-${context.readme ? `\nREADME CONTENT:\n${context.readme.slice(0, 2000)}` : ""}
-${context.problemStatement ? `\nPROBLEM STATEMENT:\n${context.problemStatement.slice(0, 2000)}` : ""}
+${context.repoContext.slice(0, 600)}
+${context.readme ? `\nREADME:\n${context.readme.slice(0, 600)}` : ""}
+${context.problemStatement ? `\nPROBLEM:\n${context.problemStatement.slice(0, 600)}` : ""}
 ${filesSection}
 
 For Problem Alignment: Directly compare the problem statement against the actual source code. List SPECIFIC features requested vs what's implemented. Point to specific files.
@@ -104,7 +104,7 @@ ONLY valid JSON. Every title and description MUST be non-empty strings.`;
 
   const response = await callAIWithRetry({
     systemPrompt, userPrompt,
-    temperature: 0.3, maxOutputTokens: 8192,
+    temperature: 0.3, maxOutputTokens: 2048,
   });
   const text = response.text;
 
