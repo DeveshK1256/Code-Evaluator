@@ -332,7 +332,6 @@ export default function EvaluationPage() {
             {modules.map((mod, i) => {
               const isSelected = selectedModules.has(mod.id);
               return (
-                {/* biome-ignore lint/a11y/noNoninteractiveTabindex: interactive label for keyboard nav */}
                 <label
                   key={mod.id}
                   tabIndex={0}
