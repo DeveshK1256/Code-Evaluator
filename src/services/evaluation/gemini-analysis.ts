@@ -47,7 +47,7 @@ export async function analyzeAllModules(
   context: { repoContext: string; readme?: string; problemStatement?: string; files?: Array<{ path: string; content: string }> }
 ): Promise<Record<string, ModResult>> {
   const filesSection = context.files?.length
-    ? `\nSOURCE FILES:\n${context.files.slice(0, 15).map((f) => `=== ${f.path} ===\n${f.content.slice(0, 800)}`).join("\n\n")}`
+    ? `\nSOURCE FILES:\n${context.files.slice(0, 8).map((f) => `=== ${f.path} ===\n${f.content.slice(0, 400)}`).join("\n\n")}`
     : "";
 
   const criteriaDescs = modules.map((m) =>
