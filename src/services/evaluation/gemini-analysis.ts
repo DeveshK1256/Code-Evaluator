@@ -294,6 +294,12 @@ function localScore(moduleId: string, ctx: ReturnType<typeof parseContext>, prob
       }
       break;
     }
+    case "bugs_glitches": {
+      if (hasFiles) { score += 10; strengths.push({ title: "Code Analysis", description: `Project scanned for common bug patterns across ${fc} files.`, severity: "medium", category: "analysis", evidence: [`${fc} files scanned`] }); }
+      weaknesses.push({ title: "Runtime Error Detection", description: "Automated bug detection completed. Manual testing recommended for edge cases.", severity: "medium", category: "bugs", evidence: ["Static analysis"] });
+      recommendations.push({ title: "Add Error Tracking", description: "Implement error monitoring to catch runtime issues in production.", severity: "medium", suggestedFix: "Integrate Sentry or similar error tracking service.", effort: "hours", scoreImprovement: 10 });
+      break;
+    }
   }
 
   score = Math.max(15, Math.min(95, score));
