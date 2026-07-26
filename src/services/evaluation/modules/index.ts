@@ -6,6 +6,7 @@ import { EfficiencyModule } from "./efficiency";
 import { TestingModule } from "./testing";
 import { AccessibilityModule } from "./accessibility";
 import { GoogleServicesModule } from "./google-services";
+import { BugsGlitchesModule } from "./bugs-glitches";
 
 export function registerAllEvaluationModules(): void {
   if (areModulesRegistered()) return;
@@ -16,10 +17,12 @@ export function registerAllEvaluationModules(): void {
   registerEvaluationModule(new TestingModule());
   registerEvaluationModule(new AccessibilityModule());
   registerEvaluationModule(new GoogleServicesModule());
+  registerEvaluationModule(new BugsGlitchesModule());
   markModulesRegistered();
 }
 
 export {
   CodeQualityModule, SecurityModule, ProblemAlignmentModule,
   EfficiencyModule, TestingModule, AccessibilityModule, GoogleServicesModule,
+  BugsGlitchesModule,
 };
