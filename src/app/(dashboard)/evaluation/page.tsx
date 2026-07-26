@@ -332,11 +332,15 @@ export default function EvaluationPage() {
             {modules.map((mod, i) => {
               const isSelected = selectedModules.has(mod.id);
               return (
+                {/* biome-ignore lint/a11y/noNoninteractiveTabindex: interactive label for keyboard nav */}
                 <label
                   key={mod.id}
-                  className={`animate-fade-in [animation-delay:${i * 0.05}s] flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleModule(mod.id); } }}
+                  className={`animate-fade-in flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     isSelected ? "border-primary bg-primary/5" : "hover:bg-accent"
                   }`}
+                  style={{ animationDelay: `${i * 0.05}s` }}
                 >
                   <input
                     type="checkbox"
