@@ -54,7 +54,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#09090b" />
+        <meta name="application-name" content="Code Evaluator" />
+        <meta name="generator" content="Next.js" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "Code Evaluator",
+              applicationCategory: "DeveloperApplication",
+              operatingSystem: "Web",
+              description: "AI-Powered software evaluation platform that analyzes code quality, security, testing, accessibility, and problem alignment.",
+              author: { "@type": "Organization", name: "Code Evaluator" },
+              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            }),
+          }}
+        />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
         <Providers>

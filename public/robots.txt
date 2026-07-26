@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://code-evaluator-sigma.vercel.app/sitemap.xml
